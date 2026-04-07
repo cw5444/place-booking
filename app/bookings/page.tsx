@@ -25,17 +25,6 @@ const safeJoinPlaces = (p: any): string => {
   return String(p);
 };
 
-const getResolvedPlaceIds = (b: Booking): string[] => {
-  if (!b.place_ids) return [];
-  if (Array.isArray(b.place_ids)) return b.place_ids;
-  try {
-    const parsed = JSON.parse(b.place_ids as string);
-    return Array.isArray(parsed) ? parsed : [b.place_ids as string];
-  } catch {
-    return [b.place_ids as string];
-  }
-};
-
 const hhmm = (val: any) => {
   if (!val) return "";
   const s = String(val).padStart(4, "0");
@@ -52,12 +41,10 @@ export default function BookingsPage() {
   const [calendarActive, setCalendarActive] = useState(false);
   const [dateJustChanged, setDateJustChanged] = useState(false);
 
-  // ← section 태그에 직접 연결할 ref
+  // Ref 객체 생성 (타입 에러 방지를 위해 직접 연결 방식 사용)
   const calendarSectionRef = useRef<HTMLElement | null>(null);
 
-  // -----------------------------------------------------------------------
-  // 3. FETCH BOOKINGS (Supabase)
-  // -----------------------------------------------------------------------
+  // FETCH 데이터 (Supabase)
   const fetchBookings = async () => {
     try {
       setLoading(true);
@@ -79,9 +66,7 @@ export default function BookingsPage() {
     fetchBookings();
   }, []);
 
-  // -----------------------------------------------------------------------
-  // 4. 오늘 날짜에 해당하는 예약만 필터링 (memo)
-  // -----------------------------------------------------------------------
+  // 선택된 날짜의 예약 필터링
   const dayBookings = useMemo(() => {
     if (!selectedDate) return [];
     return bookings.filter((b) =>
@@ -89,9 +74,7 @@ export default function BookingsPage() {
     );
   }, [bookings, selectedDate]);
 
-  // -----------------------------------------------------------------------
-  // 5. 캘린더 타일 안에 보여줄 컨텐츠 (정보 밀도 ↑)
-  // -----------------------------------------------------------------------
+  // 달력 타일 내용 구성
   const tileContent = ({
     date,
     view,
@@ -137,20 +120,15 @@ export default function BookingsPage() {
     );
   }
 
-  // -----------------------------------------------------------------------
-  // 6. UI 렌더링
-  // -----------------------------------------------------------------------
   return (
     <div className="pageContainer">
       <Nav title="예약 현황" />
 
       <div className="bookingsGrid">
-        {/* ----------  CALENDAR SECTION  ---------- */}
+        {/* CALENDAR SECTION (ref 내부의 주석 제거) */}
         <section
-          ref={calendarSectionRef}               {/* ← 직접 ref 객체 전달 */}
-          className={`calendarSection ${
-            calendarActive ? "isActive" : ""
-          }`}
+          ref={calendarSectionRef}
+          className={`calendarSection ${calendarActive ? "isActive" : ""}`}
         >
           <div className="bigCalendarWrap">
             <Calendar
@@ -170,12 +148,8 @@ export default function BookingsPage() {
           </div>
         </section>
 
-        {/* ----------  DETAIL SECTION  ---------- */}
-        <section
-          className={`detailSection ${
-            dateJustChanged ? "popEffect" : ""
-          }`}
-        >
+        {/* DETAIL SECTION */}
+        <section className={`detailSection ${dateJustChanged ? "popEffect" : ""}`}>
           <div className="detailHeader">
             <h2 className="detailDateTitle">
               {selectedDate
@@ -184,33 +158,23 @@ export default function BookingsPage() {
                   })
                 : "날짜 선택"}
             </h2>
-            <p className="detailCount">
-              총 {dayBookings.length}건의 예약
-            </p>
+            <p className="detailCount">총 {dayBookings.length}건의 예약</p>
           </div>
 
           <div className="detailList">
             {dayBookings.length === 0 ? (
-              <div className="emptyState">
-                해당 날짜에 예약이 없습니다.
-              </div>
+              <div className="emptyState">해당 날짜에 예약이 없습니다.</div>
             ) : (
               dayBookings.map((b) => (
                 <div key={b.id} className="detailCard">
                   <div className="cardTop">
-                    <span className="meetingBadge">
-                      {b.meeting_type}
-                    </span>
-                    <span className="bookerName">
-                      {b.booker_name}
-                    </span>
+                    <span className="meetingBadge">{b.meeting_type}</span>
+                    <span className="bookerName">{b.booker_name}</span>
                   </div>
                   <div className="cardInfo">
                     <div className="infoRow">
                       <span className="label">장소</span>
-                      <span className="val">
-                        {safeJoinPlaces(b.place_ids)}
-                      </span>
+                      <span className="val">{safeJoinPlaces(b.place_ids)}</span>
                     </div>
                     <div className="infoRow">
                       <span className="label">시간</span>
@@ -238,16 +202,12 @@ export default function BookingsPage() {
         </section>
       </div>
 
-      {/* --------------------------------------------------------------
-          전역 스타일 – 기존 프로젝트와 동일하게 <style jsx global>
-       --------------------------------------------------------------- */}
       <style jsx global>{`
         .pageContainer {
           min-height: 100vh;
           background: #f8fafc;
           padding-bottom: 50px;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-            Roboto, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         .bookingsGrid {
           max-width: 1200px;
@@ -256,29 +216,21 @@ export default function BookingsPage() {
           grid-template-columns: 1fr;
           gap: 0;
         }
-
-        /* ---------- CALENDAR SECTION ---------- */
         .calendarSection {
           background: #fff;
           border-bottom: 1px solid #e2e8f0;
           transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
         }
         .calendarSection.isActive {
-          background: #111827; /* Deep Black Active */
+          background: #111827;
         }
         .bigCalendarWrap {
           padding: 10px;
         }
-
-        /* React‑Calendar 커스텀 오버라이드 */
         .customCalendar.react-calendar {
           width: 100%;
           border: none;
           background: transparent;
-        }
-        .customCalendar .react-calendar__navigation {
-          height: 60px;
-          margin-bottom: 10px;
         }
         .customCalendar .react-calendar__navigation button {
           font-size: 1.2rem;
@@ -288,62 +240,46 @@ export default function BookingsPage() {
         .calendarSection.isActive .customCalendar .react-calendar__navigation button {
           color: #fff;
         }
-
         .customCalendar .react-calendar__month-view__weekdays {
-          text-transform: none;
           font-weight: 700;
-          font-size: 0.85rem;
           color: #64748b;
-          padding-bottom: 10px;
         }
         .calendarSection.isActive .customCalendar .react-calendar__month-view__weekdays {
           color: #94a3b8;
         }
-
-        /* Tile Style */
         .customCalendar .react-calendar__tile {
-          height: 125px; /* 충분히 높여 4개 아이템 표시 */
+          height: 125px;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: flex-start;
           padding: 8px 4px !important;
           border-radius: 4px;
-          border: 1px solid transparent;
-          position: relative;
         }
-        /* 날짜 숫자 가독성 */
         .customCalendar .react-calendar__tile abbr {
           font-size: 1.1rem;
           font-weight: 900;
           color: #111827;
-          margin-bottom: 4px;
-          z-index: 2;
         }
         .calendarSection.isActive .customCalendar .react-calendar__tile abbr {
           color: rgba(255, 255, 255, 0.9);
         }
-
-        /* 정보 밀도 – 미니 아이템 */
         .mtWrap {
           width: 100%;
           display: flex;
           flex-direction: column;
           gap: 2px;
           margin-top: 2px;
-          overflow: hidden;
         }
         .mtItem {
           background: #f1f5f9;
           color: #334155;
           font-size: 0.65rem;
           padding: 2px 4px;
-          border-radius: 2px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          text-align: left;
           font-weight: 600;
+          text-overflow: ellipsis;
+          overflow: hidden;
+          white-space: nowrap;
         }
         .calendarSection.isActive .mtItem {
           background: rgba(255, 255, 255, 0.1);
@@ -352,11 +288,7 @@ export default function BookingsPage() {
         .moreDots {
           font-size: 0.7rem;
           color: #94a3b8;
-          text-align: center;
-          line-height: 1;
         }
-
-        /* 선택 상태 색상 */
         .customCalendar .react-calendar__tile--active {
           background: #3b82f6 !important;
           border-radius: 8px;
@@ -364,99 +296,26 @@ export default function BookingsPage() {
         .customCalendar .react-calendar__tile--active abbr {
           color: #fff !important;
         }
-        .customCalendar .react-calendar__tile--now {
-          background: #f1f5f9;
-        }
-        .calendarSection.isActive .customCalendar .react-calendar__tile--now {
-          background: rgba(255, 255, 255, 0.05);
-        }
-
-        /* ---------- DETAIL SECTION ---------- */
         .detailSection {
           padding: 30px 20px;
-          transition: transform 0.3s ease;
         }
         .popEffect {
           animation: slideUp 0.5s ease-out;
         }
         @keyframes slideUp {
-          from {
-            transform: translateY(20px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-
-        .detailHeader {
-          margin-bottom: 24px;
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
         .detailDateTitle {
           font-size: 1.6rem;
           font-weight: 900;
-          color: #111827;
-          margin: 0;
-        }
-        .detailCount {
-          color: #64748b;
-          font-size: 0.95rem;
-          margin-top: 4px;
-          font-weight: 600;
-        }
-
-        .detailList {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
         }
         .detailCard {
           background: #fff;
           border: 1px solid #e2e8f0;
           border-radius: 16px;
           padding: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
-        .cardTop {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 12px;
-        }
-        .meetingBadge {
-          background: #eff6ff;
-          color: #3b82f6;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 0.75rem;
-          font-weight: 800;
-          text-transform: uppercase;
-        }
-        .bookerName {
-          font-weight: 800;
-          font-size: 1.1rem;
-          color: #1e293b;
-        }
-        .cardInfo {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-        .infoRow {
-          display: flex;
-          align-items: center;
-        }
-        .infoRow .label {
-          width: 50px;
-          font-size: 0.8rem;
-          color: #94a3b8;
-          font-weight: 600;
-        }
-        .infoRow .val {
-          font-size: 0.9rem;
-          color: #334155;
-          font-weight: 700;
+          margin-bottom: 16px;
         }
         .timeTag {
           background: #f8fafc;
@@ -464,20 +323,17 @@ export default function BookingsPage() {
           padding: 2px 6px;
           border-radius: 4px;
           margin-right: 4px;
+          font-size: 0.8rem;
         }
-
         @media (min-width: 1024px) {
           .bookingsGrid {
             grid-template-columns: 1.2fr 0.8fr;
             padding: 40px 20px;
             gap: 40px;
-            align-items: start;
           }
           .calendarSection {
             border: 1px solid #e2e8f0;
             border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
           }
         }
       `}</style>
