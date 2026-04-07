@@ -287,7 +287,7 @@ export default function BookingsPage() {
             }}
             title="다가오는 예약 전체 보기(지난 날짜 제외)"
           >
-            전체(지난 날짜 제외)
+            전체 예약현황
           </button>
 
           <Link
@@ -404,7 +404,7 @@ export default function BookingsPage() {
         >
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}>
             <div style={{ fontWeight: 900 }}>
-              {listMode === "date" ? "선택한 날짜 예약(상세)" : "다가오는 예약(사진 없음)"}
+              {listMode === "date" ? "선택한 날짜 예약(상세)" : "다가오는 예약"}
             </div>
             <div style={{ color: "#6b7280", fontSize: 13 }}>
               {listMode === "date" ? selectedISO : `오늘(${todayISO}) 이후`}
