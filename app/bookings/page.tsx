@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { format, isSameDay, parseISO } from "date-fns";
+import { ko } from "date-fns/locale"; // ko 로케일 직접 임포트
 import { supabase } from "@/lib/supabaseClient";
 import Nav from "@/app/components/Nav";
 
@@ -16,7 +17,7 @@ interface Booking {
   booker_name: string;
   meeting_type: string;
   merged_ranges?: string;
-  place_ids?: string[] | string; // legacy support
+  place_ids?: string[] | string;
 }
 
 const safeJoinPlaces = (p: any): string => {
@@ -41,10 +42,8 @@ export default function BookingsPage() {
   const [calendarActive, setCalendarActive] = useState(false);
   const [dateJustChanged, setDateJustChanged] = useState(false);
 
-  // Ref 객체 생성 (타입 에러 방지를 위해 직접 연결 방식 사용)
   const calendarSectionRef = useRef<HTMLElement | null>(null);
 
-  // FETCH 데이터 (Supabase)
   const fetchBookings = async () => {
     try {
       setLoading(true);
@@ -66,7 +65,6 @@ export default function BookingsPage() {
     fetchBookings();
   }, []);
 
-  // 선택된 날짜의 예약 필터링
   const dayBookings = useMemo(() => {
     if (!selectedDate) return [];
     return bookings.filter((b) =>
@@ -74,7 +72,6 @@ export default function BookingsPage() {
     );
   }, [bookings, selectedDate]);
 
-  // 달력 타일 내용 구성
   const tileContent = ({
     date,
     view,
@@ -107,13 +104,7 @@ export default function BookingsPage() {
     return (
       <div className="loadingWrap">
         <Nav title="예약 현황" />
-        <div
-          style={{
-            padding: "100px 20px",
-            textAlign: "center",
-            color: "#666",
-          }}
-        >
+        <div style={{ padding: "100px 20px", textAlign: "center", color: "#666" }}>
           데이터를 불러오는 중...
         </div>
       </div>
@@ -125,7 +116,6 @@ export default function BookingsPage() {
       <Nav title="예약 현황" />
 
       <div className="bookingsGrid">
-        {/* CALENDAR SECTION (ref 내부의 주석 제거) */}
         <section
           ref={calendarSectionRef}
           className={`calendarSection ${calendarActive ? "isActive" : ""}`}
@@ -148,14 +138,11 @@ export default function BookingsPage() {
           </div>
         </section>
 
-        {/* DETAIL SECTION */}
         <section className={`detailSection ${dateJustChanged ? "popEffect" : ""}`}>
           <div className="detailHeader">
             <h2 className="detailDateTitle">
               {selectedDate
-                ? format(selectedDate, "M월 d일 (EEEE)", {
-                    locale: require("date-fns/locale/ko"),
-                  })
+                ? format(selectedDate, "M월 d일 (EEEE)", { locale: ko })
                 : "날짜 선택"}
             </h2>
             <p className="detailCount">총 {dayBookings.length}건의 예약</p>
