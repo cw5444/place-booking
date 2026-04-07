@@ -1,7 +1,9 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import Nav from "./components/Nav";
+import SupabaseProvider from "./auth/provider"; // ✅ 추가
 
 export const metadata: Metadata = {
   title: "경배의 집 공간 예약",
@@ -24,36 +26,38 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
-        <header
-          style={{
-            borderBottom: "1px solid #e5e7eb",
-            padding: "12px 16px",
-            position: "sticky",
-            top: 0,
-            background: "white",
-            zIndex: 50,
-          }}
-        >
-          <div
+        {/* ✅ SupabaseProvider로 감싸기 */}
+        <SupabaseProvider>
+          <header
             style={{
-              maxWidth: 960,
-              margin: "0 auto",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 16,
+              borderBottom: "1px solid #e5e7eb",
+              padding: "12px 16px",
+              position: "sticky",
+              top: 0,
+              background: "white",
+              zIndex: 50,
             }}
           >
-            <Link href="/" style={brandStyle}>
-              At Your Feet
-            </Link>
+            <div
+              style={{
+                maxWidth: 960,
+                margin: "0 auto",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+              }}
+            >
+              <Link href="/" style={brandStyle}>
+                At Your Feet
+              </Link>
 
-            <Nav />
-          </div>
-        </header>
+              <Nav />
+            </div>
+          </header>
 
-        {/* ✅ children를 960 박스에 가두지 말고, 페이지가 스스로 레이아웃/스크롤을 결정하게 둠 */}
-        <main style={{ width: "100%", minWidth: 0 }}>{children}</main>
+          <main style={{ width: "100%", minWidth: 0 }}>{children}</main>
+        </SupabaseProvider>
       </body>
     </html>
   );
