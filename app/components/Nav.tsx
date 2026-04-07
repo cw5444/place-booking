@@ -1,47 +1,98 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSupabase } from "../auth/provider";
 
-const baseLinkStyle = { padding: "8px 12px", borderRadius: 8, textDecoration: "none", color: "inherit", fontSize: "14px", fontWeight: 500 } as const;
-const adminEmails = ["cw5444@gmail.com", "24umut@gmail.com"];
+// title을 받을 수 있도록 인터페이스 추가
+interface NavProps {
+  title?: string;
+}
 
-export default function Nav() {
+export default function Nav({ title }: NavProps) {
   const pathname = usePathname();
-  const { session } = useSupabase();
-  
-  // ✅ 세션 정보가 실제로 있고, 이메일이 관리자 리스트에 있을 때만 true
-  const isAdmin = !!(session?.user?.email && adminEmails.includes(session.user.email));
-
-  const links = [
-    { href: "/", label: "Home" },
-    { href: "/places", label: "장소 선택" },
-    { href: "/bookings", label: "예약 현황" }, // 👈 이름 변경 완료
-  ];
-
-  const adminLinks = [
-    { href: "/admin", label: "🛠️ 대시보드" },
-    { href: "/admin/slots", label: "📅 슬롯 차단" },
-    { href: "/admin/bookings", label: "📬 예약 승인" },
-  ];
 
   return (
-    <header style={{ borderBottom: "1px solid #e5e7eb", marginBottom: "20px", padding: "10px 0" }}>
-      <nav style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-        {links.map((l) => (
-          <Link key={l.href} href={l.href} style={{ ...baseLinkStyle, background: pathname === l.href ? "#111827" : "transparent", color: pathname === l.href ? "white" : "#4b5563" }}>{l.label}</Link>
-        ))}
-        {/* ✅ isAdmin 일 때만 관리자 메뉴가 보입니다 */}
-        {isAdmin && (
-          <>
-            <div style={{ width: "1px", height: "20px", background: "#d1d5db", margin: "0 8px" }} />
-            {adminLinks.map((l) => (
-              <Link key={l.href} href={l.href} style={{ ...baseLinkStyle, background: pathname.startsWith(l.href) ? "#ef4444" : "#fef2f2", color: pathname.startsWith(l.href) ? "white" : "#b91c1c" }}>{l.label}</Link>
-            ))}
-          </>
-        )}
-      </nav>
-    </header>
+    <nav className="navContainer">
+      <div className="navInner">
+        <div className="navLeft">
+          <Link href="/" className="navLogo">
+            🏠 <span className="logoText">경배의 집</span>
+          </Link>
+          {title && <span className="navSeparator">/</span>}
+          {title && <span className="navCurrentTitle">{title}</span>}
+        </div>
+
+        <div className="navLinks">
+          <Link href="/bookings" className={`navItem ${pathname === "/bookings" ? "active" : ""}`}>
+            예약현황
+          </Link>
+          <Link href="/bookings/new" className={`navItem ${pathname === "/bookings/new" ? "active" : ""}`}>
+            예약하기
+          </Link>
+        </div>
+      </div>
+
+      <style jsx>{`
+        .navContainer {
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid #e2e8f0;
+        }
+        .navInner {
+          max-width: 1200px;
+          margin: 0 auto;
+          height: 64px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 20px;
+        }
+        .navLeft {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .navLogo {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-weight: 800;
+          font-size: 1.1rem;
+          color: #1a202c;
+          text-decoration: none;
+        }
+        .navSeparator {
+          color: #cbd5e1;
+          font-weight: 300;
+        }
+        .navCurrentTitle {
+          font-weight: 600;
+          color: #64748b;
+          font-size: 0.95rem;
+        }
+        .navLinks {
+          display: flex;
+          gap: 20px;
+        }
+        .navItem {
+          text-decoration: none;
+          color: #64748b;
+          font-weight: 500;
+          font-size: 0.9rem;
+          transition: color 0.2s;
+        }
+        .navItem.active {
+          color: #3b82f6;
+          font-weight: 700;
+        }
+        .navItem:hover {
+          color: #1e293b;
+        }
+      `}</style>
+    </nav>
   );
 }

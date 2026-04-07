@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { format, isSameDay, parseISO } from "date-fns";
-import { ko } from "date-fns/locale"; // ko 로케일 직접 임포트
+import { ko } from "date-fns/locale"; 
 import { supabase } from "@/lib/supabaseClient";
 import Nav from "@/app/components/Nav";
 
