@@ -52,9 +52,12 @@ export default function BookingsPage() {
   const [calendarActive, setCalendarActive] = useState(false);
   const [dateJustChanged, setDateJustChanged] = useState(false);
 
+  // ← section 태그에 직접 연결할 ref
   const calendarSectionRef = useRef<HTMLElement | null>(null);
 
-  // FETCH
+  // -----------------------------------------------------------------------
+  // 3. FETCH BOOKINGS (Supabase)
+  // -----------------------------------------------------------------------
   const fetchBookings = async () => {
     try {
       setLoading(true);
@@ -76,16 +79,30 @@ export default function BookingsPage() {
     fetchBookings();
   }, []);
 
-  // Filter for Bottom Detail
+  // -----------------------------------------------------------------------
+  // 4. 오늘 날짜에 해당하는 예약만 필터링 (memo)
+  // -----------------------------------------------------------------------
   const dayBookings = useMemo(() => {
     if (!selectedDate) return [];
-    return bookings.filter((b) => isSameDay(parseISO(b.date_iso), selectedDate));
+    return bookings.filter((b) =>
+      isSameDay(parseISO(b.date_iso), selectedDate)
+    );
   }, [bookings, selectedDate]);
 
-  // Calendar Tile Content (Informative Density)
-  const tileContent = ({ date, view }: { date: Date; view: string }) => {
+  // -----------------------------------------------------------------------
+  // 5. 캘린더 타일 안에 보여줄 컨텐츠 (정보 밀도 ↑)
+  // -----------------------------------------------------------------------
+  const tileContent = ({
+    date,
+    view,
+  }: {
+    date: Date;
+    view: string;
+  }) => {
     if (view !== "month") return null;
-    const matches = bookings.filter((b) => isSameDay(parseISO(b.date_iso), date));
+    const matches = bookings.filter((b) =>
+      isSameDay(parseISO(b.date_iso), date)
+    );
     if (matches.length === 0) return null;
 
     const displayItems = matches.slice(0, 4);
@@ -107,22 +124,33 @@ export default function BookingsPage() {
     return (
       <div className="loadingWrap">
         <Nav title="예약 현황" />
-        <div style={{ padding: "100px 20px", textAlign: "center", color: "#666" }}>
+        <div
+          style={{
+            padding: "100px 20px",
+            textAlign: "center",
+            color: "#666",
+          }}
+        >
           데이터를 불러오는 중...
         </div>
       </div>
     );
   }
 
+  // -----------------------------------------------------------------------
+  // 6. UI 렌더링
+  // -----------------------------------------------------------------------
   return (
     <div className="pageContainer">
       <Nav title="예약 현황" />
 
       <div className="bookingsGrid">
-        {/* 수정된 부분: ref 할당 시 값을 반환하지 않도록 중괄호 사용 */}
-        <section 
-          ref={(el) => { calendarSectionRef.current = el; }} 
-          className={`calendarSection ${calendarActive ? "isActive" : ""}`}
+        {/* ----------  CALENDAR SECTION  ---------- */}
+        <section
+          ref={calendarSectionRef}               {/* ← 직접 ref 객체 전달 */}
+          className={`calendarSection ${
+            calendarActive ? "isActive" : ""
+          }`}
         >
           <div className="bigCalendarWrap">
             <Calendar
@@ -142,37 +170,64 @@ export default function BookingsPage() {
           </div>
         </section>
 
-        <section className={`detailSection ${dateJustChanged ? "popEffect" : ""}`}>
+        {/* ----------  DETAIL SECTION  ---------- */}
+        <section
+          className={`detailSection ${
+            dateJustChanged ? "popEffect" : ""
+          }`}
+        >
           <div className="detailHeader">
             <h2 className="detailDateTitle">
-              {selectedDate ? format(selectedDate, "M월 d일 (EEEE)", { locale: require("date-fns/locale/ko") }) : "날짜 선택"}
+              {selectedDate
+                ? format(selectedDate, "M월 d일 (EEEE)", {
+                    locale: require("date-fns/locale/ko"),
+                  })
+                : "날짜 선택"}
             </h2>
-            <p className="detailCount">총 {dayBookings.length}건의 예약</p>
+            <p className="detailCount">
+              총 {dayBookings.length}건의 예약
+            </p>
           </div>
 
           <div className="detailList">
             {dayBookings.length === 0 ? (
-              <div className="emptyState">해당 날짜에 예약이 없습니다.</div>
+              <div className="emptyState">
+                해당 날짜에 예약이 없습니다.
+              </div>
             ) : (
               dayBookings.map((b) => (
                 <div key={b.id} className="detailCard">
                   <div className="cardTop">
-                    <span className="meetingBadge">{b.meeting_type}</span>
-                    <span className="bookerName">{b.booker_name}</span>
+                    <span className="meetingBadge">
+                      {b.meeting_type}
+                    </span>
+                    <span className="bookerName">
+                      {b.booker_name}
+                    </span>
                   </div>
                   <div className="cardInfo">
                     <div className="infoRow">
                       <span className="label">장소</span>
-                      <span className="val">{safeJoinPlaces(b.place_ids)}</span>
+                      <span className="val">
+                        {safeJoinPlaces(b.place_ids)}
+                      </span>
                     </div>
                     <div className="infoRow">
                       <span className="label">시간</span>
                       <span className="val">
                         {b.merged_ranges ? (
-                          (JSON.parse(b.merged_ranges) as {startMin:number, endMin:number}[]).map((r, i) => (
-                            <span key={i} className="timeTag">{hhmm(r.startMin)} - {hhmm(r.endMin)}</span>
+                          (
+                            JSON.parse(
+                              b.merged_ranges
+                            ) as { startMin: number; endMin: number }[]
+                          ).map((r, i) => (
+                            <span key={i} className="timeTag">
+                              {hhmm(r.startMin)} - {hhmm(r.endMin)}
+                            </span>
                           ))
-                        ) : "시간 정보 없음"}
+                        ) : (
+                          "시간 정보 없음"
+                        )}
                       </span>
                     </div>
                   </div>
@@ -183,12 +238,16 @@ export default function BookingsPage() {
         </section>
       </div>
 
+      {/* --------------------------------------------------------------
+          전역 스타일 – 기존 프로젝트와 동일하게 <style jsx global>
+       --------------------------------------------------------------- */}
       <style jsx global>{`
         .pageContainer {
           min-height: 100vh;
           background: #f8fafc;
           padding-bottom: 50px;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+            Roboto, sans-serif;
         }
         .bookingsGrid {
           max-width: 1200px;
@@ -198,7 +257,7 @@ export default function BookingsPage() {
           gap: 0;
         }
 
-        /* CALENDAR SECTION */
+        /* ---------- CALENDAR SECTION ---------- */
         .calendarSection {
           background: #fff;
           border-bottom: 1px solid #e2e8f0;
@@ -207,12 +266,11 @@ export default function BookingsPage() {
         .calendarSection.isActive {
           background: #111827; /* Deep Black Active */
         }
-
         .bigCalendarWrap {
           padding: 10px;
         }
 
-        /* React Calendar Custom Overrides */
+        /* React‑Calendar 커스텀 오버라이드 */
         .customCalendar.react-calendar {
           width: 100%;
           border: none;
@@ -244,7 +302,7 @@ export default function BookingsPage() {
 
         /* Tile Style */
         .customCalendar .react-calendar__tile {
-          height: 125px; /* Dense but enough height for 4 items */
+          height: 125px; /* 충분히 높여 4개 아이템 표시 */
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -254,7 +312,7 @@ export default function BookingsPage() {
           border: 1px solid transparent;
           position: relative;
         }
-        /* Date Number Clarity */
+        /* 날짜 숫자 가독성 */
         .customCalendar .react-calendar__tile abbr {
           font-size: 1.1rem;
           font-weight: 900;
@@ -266,7 +324,7 @@ export default function BookingsPage() {
           color: rgba(255, 255, 255, 0.9);
         }
 
-        /* Information Density: Mini Items */
+        /* 정보 밀도 – 미니 아이템 */
         .mtWrap {
           width: 100%;
           display: flex;
@@ -298,7 +356,7 @@ export default function BookingsPage() {
           line-height: 1;
         }
 
-        /* Selection States */
+        /* 선택 상태 색상 */
         .customCalendar .react-calendar__tile--active {
           background: #3b82f6 !important;
           border-radius: 8px;
@@ -313,7 +371,7 @@ export default function BookingsPage() {
           background: rgba(255, 255, 255, 0.05);
         }
 
-        /* DETAIL SECTION */
+        /* ---------- DETAIL SECTION ---------- */
         .detailSection {
           padding: 30px 20px;
           transition: transform 0.3s ease;
@@ -322,8 +380,14 @@ export default function BookingsPage() {
           animation: slideUp 0.5s ease-out;
         }
         @keyframes slideUp {
-          from { transform: translateY(20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
         }
 
         .detailHeader {
