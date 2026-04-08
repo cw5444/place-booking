@@ -1,96 +1,74 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// title을 받을 수 있도록 인터페이스 추가
-interface NavProps {
-  title?: string;
-}
-
-export default function Nav({ title }: NavProps) {
+export default function Nav({ title }: { title?: string }) {
   const pathname = usePathname();
 
   return (
-    <nav className="navContainer">
-      <div className="navInner">
-        <div className="navLeft">
-          <Link href="/" className="navLogo">
-            🏠 <span className="logoText">경배의 집</span>
-          </Link>
-          {title && <span className="navSeparator">/</span>}
-          {title && <span className="navCurrentTitle">{title}</span>}
-        </div>
+    <nav className="navBar">
+      <div className="navContainer">
+        
 
-        <div className="navLinks">
-          <Link href="/bookings" className={`navItem ${pathname === "/bookings" ? "active" : ""}`}>
-            예약현황
+        <div className="navRight">
+          {/* ✅ '경배의 집' 메뉴 링크를 삭제하고, Places를 맨 앞으로 옮겼습니다. */}
+          <Link href="/places" className={`navLink spaceBtn ${pathname === "/places" ? "active" : ""}`}>
+            <span className="dot"></span> Places
           </Link>
-          <Link href="/bookings/new" className={`navItem ${pathname === "/bookings/new" ? "active" : ""}`}>
-            예약하기
+          <Link href="/bookings" className={`navLink ${pathname === "/bookings" ? "active" : ""}`}>
+            Bookings
+          </Link>
+          <Link href="/admin" className="adminLinkMini">
+            Admin
           </Link>
         </div>
       </div>
 
       <style jsx>{`
-        .navContainer {
+        .navBar {
+          background: #fff;
+          border-bottom: 1px solid #eee;
           position: sticky;
           top: 0;
-          z-index: 100;
-          background: rgba(255, 255, 255, 0.8);
-          backdrop-filter: blur(10px);
-          border-bottom: 1px solid #e2e8f0;
+          z-index: 1000;
+          height: 60px;
+          display: flex;
+          align-items: center;
         }
-        .navInner {
+        .navContainer {
           max-width: 1200px;
           margin: 0 auto;
-          height: 64px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
+          width: 100%;
           padding: 0 20px;
-        }
-        .navLeft {
           display: flex;
+          justify-content: space-between;
           align-items: center;
-          gap: 10px;
         }
-        .navLogo {
+        .navLeft { display: flex; align-items: center; gap: 12px; }
+        .logo { font-weight: 900; font-size: 1.1rem; color: #111; text-decoration: none; }
+        .titleDivider { color: #94a3b8; font-size: 0.95rem; font-weight: 500; }
+        .navRight { display: flex; align-items: center; gap: 20px; }
+        .navLink { text-decoration: none; color: #64748b; font-size: 0.9rem; font-weight: 600; }
+        .navLink.active { color: #3b82f6; }
+        .spaceBtn {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-weight: 800;
-          font-size: 1.1rem;
-          color: #1a202c;
-          text-decoration: none;
+          background: #f1f5f9;
+          padding: 6px 14px;
+          border-radius: 20px;
+          color: #475569;
         }
-        .navSeparator {
+        .spaceBtn .dot { width: 6px; height: 6px; background: #3b82f6; border-radius: 50%; }
+        .adminLinkMini {
+          margin-left: 10px;
+          font-size: 0.7rem;
           color: #cbd5e1;
-          font-weight: 300;
-        }
-        .navCurrentTitle {
-          font-weight: 600;
-          color: #64748b;
-          font-size: 0.95rem;
-        }
-        .navLinks {
-          display: flex;
-          gap: 20px;
-        }
-        .navItem {
+          border: 1px solid #f1f5f9;
+          padding: 4px 8px;
+          border-radius: 4px;
           text-decoration: none;
-          color: #64748b;
-          font-weight: 500;
-          font-size: 0.9rem;
-          transition: color 0.2s;
-        }
-        .navItem.active {
-          color: #3b82f6;
-          font-weight: 700;
-        }
-        .navItem:hover {
-          color: #1e293b;
         }
       `}</style>
     </nav>

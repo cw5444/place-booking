@@ -3,54 +3,33 @@
 import * as React from "react";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient"; // Supabase 연결
+import { supabase } from "@/lib/supabaseClient";
 
-type PlaceId = "worship" | "small1" | "small2";
-
-const PLACE_THUMBS: Record<PlaceId, { name: string; src: string }> = {
-  worship: { name: "경배실", src: "/places/worship-1.jpg" },
-  small1: { name: "소모임실 1 (경배실 안쪽)", src: "/places/small1-1.jpg" },
-  small2: { name: "소모임실 2 (중앙 홀)", src: "/places/small2-1.jpg" },
+type BookingRecord = {
+  id: string;
+  place_name?: string;
+  place_names?: string[]; // ✅ 추가
+  place_id?: string;
+  date_iso?: string;
+  booking_date?: string;
+  start_time?: string;
+  end_time?: string;
+  start_min?: number;
+  end_min?: number;
+  merged_ranges?: any; // ✅ 추가
+  booker_name?: string;
+  user_name?: string;
+  // 기타 필요 필드: 이 파일에선 안전하게 Optional로 처리
+  [key: string]: any;
 };
 
-// ✅ 시간 포맷 함수 (Invalid Date 방지 및 UI 보존)
-function hhmm(min: number) {
-  if (min === undefined || min === null) return "00:00";
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-// ✅ 기존 UI 보존을 위한 헬퍼 함수 100% 유지 (Supabase 컬럼명 대응)
-function safeJoinPlaces(b: any) {
-  if (Array.isArray(b.place_names) && b.place_names.length > 0) return b.place_names.join(", ");
-  if (typeof b.placeName === "string" && b.placeName.trim()) return b.placeName; // 레거시 대응
-  return "-";
-}
-
-function safeMeetingType(b: any) {
-  if (typeof b.meeting_type === "string" && b.meeting_type.trim()) return b.meeting_type;
-  if (typeof b.meeting_custom === "string" && b.meeting_custom.trim()) return b.meeting_custom;
-  return "-";
-}
-
-function safePlaceIds(b: any): PlaceId[] {
-  const ids: string[] = [];
-  if (Array.isArray(b.place_ids)) ids.push(...b.place_ids);
-  if (typeof b.placeId === "string") ids.push(b.placeId); // 레거시 대응
-  const uniq = Array.from(new Set(ids));
-  return uniq.filter((v): v is PlaceId => v === "worship" || v === "small1" || v === "small2");
-}
-
 export default function BookingConfirmClient() {
-  const sp = useSearchParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const bookingId = sp.get("bookingId");
-
-  const [booking, setBooking] = React.useState<any | null>(null);
+  const bookingId = searchParams.get("bookingId"); // URL 쿼리에 있는 bookingId를 사용
+  const [booking, setBooking] = React.useState<BookingRecord | null>(null);
   const [loading, setLoading] = React.useState(true);
 
-  // ✅ 데이터 로직: Supabase 서버에서 실시간 조회
   React.useEffect(() => {
     if (!bookingId) {
       setLoading(false);
@@ -62,92 +41,189 @@ export default function BookingConfirmClient() {
         .select("*")
         .eq("id", bookingId)
         .single();
-      if (!error && data) setBooking(data);
+
+      if (!error && data) {
+        setBooking(data as BookingRecord);
+      } else {
+        setBooking(null);
+      }
       setLoading(false);
     };
     fetchBooking();
   }, [bookingId]);
 
   const shellStyle: React.CSSProperties = {
-    padding: 24, paddingBottom: 80, maxWidth: 860, margin: "0 auto",
-    fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", color: "#111827",
+    paddingTop: 40,
+    paddingLeft: 24,
+    paddingRight: 24,
+    paddingBottom: 80,
+    maxWidth: 600,
+    margin: "0 auto",
+    fontFamily: "system-ui, -apple-system, sans-serif",
+    color: "#111827",
   };
 
   const buttonStyle: React.CSSProperties = {
-    borderRadius: 12, padding: "10px 12px", border: "1px solid #e5e7eb", background: "white", cursor: "pointer",
+    flex: 1,
+    borderRadius: 12,
+    padding: "14px",
+    border: "1px solid #e5e7eb",
+    background: "white",
+    cursor: "pointer",
+    fontWeight: 600,
   };
 
-  if (loading) return <main style={shellStyle}><p>예약 정보를 불러오는 중...</p></main>;
+  // 장소 표기 (수정: place_names 배열 처리 추가)
+  const placeDisplay = React.useMemo(() => {
+    if (Array.isArray(booking?.place_names)) return booking.place_names.join(", ");
+    return booking?.place_name ?? booking?.place_id ?? "General Space";
+  }, [booking]);
 
-  if (!bookingId || !booking) {
+  // Date 표기 (date_iso 또는 booking_date 중 사용 가능)
+  const dateDisplay = booking?.date_iso ?? booking?.booking_date ?? "";
+
+  // Time 표기 (수정: merged_ranges 배열 처리 추가)
+  const timeDisplay = React.useMemo(() => {
+    const toHHMM = (mins: number) => {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      const pad = (n: number) => String(n).padStart(2, "0");
+      return `${pad(h)}:${pad(m)}`;
+    };
+
+    if (Array.isArray(booking?.merged_ranges) && booking.merged_ranges.length > 0) {
+      return booking.merged_ranges
+        .map((r: any) => `${toHHMM(r.start_min)} - ${toHHMM(r.end_min)}`)
+        .join(", ");
+    }
+    
+    if (booking?.start_time || booking?.end_time) {
+      const s = booking.start_time ?? "";
+      const e = booking.end_time ?? "";
+      return `${s} - ${e}`.trim();
+    }
+    
+    if (booking?.start_min != null && booking?.end_min != null) {
+      return `${toHHMM(booking.start_min)} - ${toHHMM(booking.end_min)}`;
+    }
+    
+    return "-";
+  }, [booking]);
+
+  if (loading) {
     return (
       <main style={shellStyle}>
-        <h1 style={{ fontSize: 22, margin: "0 0 10px" }}>예약 확정</h1>
-        <p style={{ color: "#6b7280", margin: "0 0 12px" }}>예약 정보를 찾지 못했습니다.</p>
-        <button style={buttonStyle} onClick={() => router.push("/bookings/new")}>새 예약</button>
+        <p>Loading...</p>
       </main>
     );
   }
 
-  const placeText = safeJoinPlaces(booking);
-  const meetingText = safeMeetingType(booking);
-  const placeIds = safePlaceIds(booking);
-  const reservedThumbs = placeIds.map((pid) => ({ pid, meta: PLACE_THUMBS[pid] })).filter((x) => Boolean(x.meta));
+  if (!bookingId || !booking) {
+    return (
+      <main style={shellStyle}>
+        <div style={{ textAlign: "center", padding: "100px 0" }}>
+          <h2 style={{ fontSize: 20, marginBottom: 12 }}>Booking not found</h2>
+          <button style={{ ...buttonStyle, maxWidth: 200 }} onClick={() => router.push("/bookings")}>
+            Go Back
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  // 로컬 이미지 경로 (place_id에 따라 다르게 가능)
+  const imageSrcs = [
+    `/places/${booking.place_id ?? "worship"}-1.jpg`,
+    `/places/${booking.place_id ?? "worship"}-2.jpg`,
+  ];
 
   return (
     <main style={shellStyle}>
-      <h1 style={{ fontSize: 22, margin: "0 0 6px" }}>예약이 확정되었습니다</h1>
-      <div style={{ color: "#6b7280", fontSize: 13, marginBottom: 14 }}>예약 내용이 아래와 같이 저장되었습니다.</div>
+      {/* 헤더 */}
+      <div style={{ textAlign: "center", marginBottom: 30 }}>
+        <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
+        <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 6px" }}>
+          Reservation Confirmed
+        </h2>
+        <div style={{ color: "#6b7280", fontSize: 14 }}>
+          Your booking has been successfully saved.
+        </div>
+      </div>
 
-      {/* 썸네일 그리드 UI 보존 */}
-      {reservedThumbs.length > 0 ? (
-        <section style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 14, background: "white", marginBottom: 12 }}>
-          <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 8 }}>선택한 공간</div>
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(reservedThumbs.length, 3)}, minmax(0, 1fr))`, gap: 10 }}>
-            {reservedThumbs.map(({ pid, meta }) => (
-              <div key={pid} style={{ borderRadius: 12, overflow: "hidden", border: "2px solid #111827", background: "#f9fafb" }}>
-                <div style={{ position: "relative", width: "100%", height: 64, background: "#f3f4f6" }}>
-                  <Image src={meta.src} alt={meta.name} fill sizes="(max-width: 860px) 33vw, 260px" style={{ objectFit: "cover" }} />
-                </div>
-                <div style={{ padding: "8px 10px", fontSize: 12, color: "#374151", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta.name}</div>
-              </div>
-            ))}
+      {/* 로컬 썸네일 그리드 */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, 1fr)",
+          gap: 12,
+          marginBottom: 24,
+        }}
+      >
+        {imageSrcs.map((src, idx) => (
+          <div key={idx} style={{ position: "relative", height: 180, borderRadius: 16, overflow: "hidden", border: "1px solid #f1f5f9" }}>
+            <Image
+              src={src}
+              alt="place"
+              fill
+              style={{ objectFit: "cover" }}
+              unoptimized
+            />
           </div>
-        </section>
-      ) : null}
+        ))}
+      </div>
 
-      <section style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 16, background: "white" }}>
-        <div style={{ display: "grid", gap: 10 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 10 }}>
-            <div style={{ color: "#6b7280" }}>장소</div>
-            <div style={{ fontWeight: 650 }}>{placeText}</div>
+      {/* 상세 정보 */}
+      <section
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: 16,
+          padding: 24,
+          background: "white",
+        }}
+      >
+        <div style={{ display: "grid", gap: 16 }}>
+          {/* 장소 */}
+          <div>
+            <label style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" }}>
+              Place
+            </label>
+            <div style={{ fontWeight: 700, fontSize: 18 }}>{placeDisplay}</div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 10 }}>
-            <div style={{ color: "#6b7280" }}>모임 성격</div>
-            <div style={{ fontWeight: 650 }}>{meetingText}</div>
+
+          {/* 날짜/시간 */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div>
+              <label style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" }}>
+                Date
+              </label>
+              <div style={{ fontWeight: 600 }}>{dateDisplay}</div>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" }}>
+                Time
+              </label>
+              <div style={{ fontWeight: 600 }}>{timeDisplay}</div>
+            </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 10 }}>
-            <div style={{ color: "#6b7280" }}>날짜</div>
-            <div style={{ fontWeight: 650 }}>{booking.date_iso}</div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 10 }}>
-            <div style={{ color: "#6b7280" }}>예약자</div>
-            <div style={{ fontWeight: 650 }}>{booking.booker_name} <span style={{ color: "#9ca3af" }}>/</span> {booking.booker_phone}</div>
-          </div>
-          <div style={{ paddingTop: 10, borderTop: "1px solid #e5e7eb" }}>
-            <div style={{ color: "#6b7280", marginBottom: 6 }}>시간</div>
-            <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 6 }}>
-              {(booking.merged_ranges || []).map((r: any, i: number) => (
-                <li key={i}><strong>{hhmm(r.start_min)}–{hhmm(r.end_min)}</strong></li>
-              ))}
-            </ul>
+
+          {/* 예약자 */}
+          <div style={{ paddingTop: 16, borderTop: "1px solid #f1f5f9" }}>
+            <label style={{ fontSize: 12, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" }}>
+              Booked By
+            </label>
+            <div style={{ fontWeight: 600 }}>{booking.booker_name ?? booking.user_name ?? "Guest User"}</div>
           </div>
         </div>
       </section>
 
-      <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
-        <button style={buttonStyle} onClick={() => router.push("/bookings")}>예약 현황 보기</button>
-        <button style={{ ...buttonStyle, border: "1px solid #111827", background: "#111827", color: "white" }} onClick={() => router.push("/bookings/new")}>새 예약</button>
+      {/* 버튼들 */}
+      <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+        <button style={buttonStyle} onClick={() => router.push("/bookings")}>
+          View Bookings
+        </button>
+        <button style={{ ...buttonStyle, background: "#111827", color: "white", border: "none" }} onClick={() => router.push("/bookings/new")}>
+          New Booking
+        </button>
       </div>
     </main>
   );
