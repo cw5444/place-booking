@@ -11,10 +11,7 @@ function hhmm(min: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-/* ----------  ★ 수정 시작 ★ ----------
-   관리자 이메일 화이트리스트 – 실제 admin 계정 두 개만 입력 */
 const ADMIN_EMAILS = ["admin1@example.com", "admin2@example.com"];
-// ----------  ★ 수정 종료 ★ ---------- */
 
 export default function AdminBookingsPage() {
   const { supabase, session, loading: authLoading } = useSupabase();
@@ -32,21 +29,15 @@ export default function AdminBookingsPage() {
     setLoading(false);
   };
 
-  /* -------------------------------------------------------------
-     ① 세션 로딩·인증 로직 (수정 포인트)
-     ② Supabase Auth 상태 변화 감지 (새로운 라인)
-  ------------------------------------------------------------- */
   React.useEffect(() => {
-    if (authLoading) return; // 아직 Supabase가 로드 중 → 기다림
+    if (authLoading) return;
 
-    // 세션 없으면 홈으로 이동
     if (!session) {
       alert("관리자 권한이 필요합니다.");
       router.replace("/");
       return;
     }
 
-    // ---------- 화이트리스트 검사 ----------
     const whitelist = ADMIN_EMAILS.map((e) => e.toLowerCase().trim());
     const curEmail = (session.user?.email ?? "").toLowerCase().trim();
     if (!whitelist.includes(curEmail)) {
@@ -55,47 +46,35 @@ export default function AdminBookingsPage() {
       return;
     }
 
-    // ---------- 이메일 인증 검사 ----------
+    // [수정] session.user를 안전하게 체크 (Optional Chaining)
     const emailConfirmed =
-      // 최신 SDK : email_confirmed_at
-      (session.user as any).email_confirmed_at ||
-      // 구버전 SDK : email_confirmed boolean
-      (session.user as any).email_confirmed;
+      (session.user as any)?.email_confirmed_at ||
+      (session.user as any)?.email_confirmed;
 
     if (!emailConfirmed) {
-      // 인증이 아직 안 된 경우 UI에서 재전송 버튼을 보여 주게 하고,
-      // 여기서는 fetch를 하지 않음.
       setLoading(false);
       return;
     }
 
-    // 인증·화이트리스트 모두 OK → 데이터 로드
     fetchBookings();
 
-    // ---------  Supabase Auth State Change Listener ----------
-    // 이메일 인증이 완료되면 Supabase는 새로운 session을
-    // (email_confirmed_at 포함) 반환합니다.
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        // 로그인·세션 갱신·이메일 인증 완료 등 모든 이벤트
         if (newSession?.user?.email === curEmail) {
           const confirmedNow =
-            (newSession.user as any).email_confirmed_at ||
-            (newSession.user as any).email_confirmed;
+            (newSession.user as any)?.email_confirmed_at ||
+            (newSession.user as any)?.email_confirmed;
           if (confirmedNow) {
-            // 인증이 방금 완료됐으면 바로 예약 데이터를 다시 불러옴
             await fetchBookings();
           }
         }
       }
     );
 
-    // 클린업: 컴포넌트 언마운트 시 리스너 해제
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, authLoading]); // ← 의존성은 그대로 유지 (session이 바뀔 때 재실행)
+  }, [session, authLoading]);
 
   const resendVerification = async () => {
     const { error } = await supabase.auth.resend({
@@ -115,9 +94,6 @@ export default function AdminBookingsPage() {
     else alert("상태 변경 실패");
   };
 
-  /* -------------------------------------------------------------
-     로딩·인증 UI
-  ------------------------------------------------------------- */
   if (authLoading || loading) {
     return (
       <div style={{ padding: 20, fontFamily: "sans-serif" }}>
@@ -126,10 +102,11 @@ export default function AdminBookingsPage() {
     );
   }
 
-  // ---------- 인증되지 않은 경우 UI ----------
+  // [수정] session.user가 없을 경우를 대비한 안전한 체크
   const emailConfirmedNow =
-    (session.user as any).email_confirmed_at ||
-    (session.user as any).email_confirmed;
+    (session?.user as any)?.email_confirmed_at ||
+    (session?.user as any)?.email_confirmed;
+
   if (!emailConfirmedNow) {
     return (
       <div style={{ padding: 20, maxWidth: 600, margin: "0 auto" }}>
@@ -155,9 +132,6 @@ export default function AdminBookingsPage() {
     );
   }
 
-  /* -------------------------------------------------------------
-     인증·허용된 관리자일 때 보여지는 메인 UI
-  ------------------------------------------------------------- */
   return (
     <main style={{ padding: 20, maxWidth: 1000, margin: "0 auto", fontFamily: "sans-serif" }}>
       <div style={{ marginBottom: 10, fontSize: 14, color: "#666" }}>
@@ -165,7 +139,6 @@ export default function AdminBookingsPage() {
       </div>
       <h1 style={{ fontSize: 24, marginBottom: 20 }}>📬 예약 승인 관리 (전체 목록)</h1>
 
-      {/* 슬롯 관리 페이지 이동 안내 박스 */}
       <div
         style={{
           display: "flex",
@@ -250,7 +223,7 @@ export default function AdminBookingsPage() {
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1ff", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
                 <div style={{ fontSize: 13, color: "#6b7280" }}>예약 정보</div>
                 <div style={{ fontSize: 18, fontWeight: 800, margin: "4px 0" }}>{b.date_iso}</div>
