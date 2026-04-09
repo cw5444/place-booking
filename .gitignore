@@ -21,3 +21,4 @@ Videos/
 *.leveldb
 *.indexeddb
 *.sqlite
+.env.local
