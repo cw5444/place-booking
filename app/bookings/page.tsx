@@ -71,13 +71,13 @@ export default function BookingsPage() {
         .eq("status", "BLOCKED");
 
       // 3️⃣ 데이터 합치기 및 다중 날짜 처리
-      const normalBookings = (bookingData || []).map(b => ({
+      const normalBookings = (bookingData || []).map((b: any) => ({
         ...b,
         is_blocked: false,
       }));
 
       const blockedSlots: Booking[] = [];
-      (slotData || []).forEach(s => {
+      (slotData || []).forEach((s: any) => {
         const start = new Date(s.start_at);
         const end = new Date(s.end_at);
 
