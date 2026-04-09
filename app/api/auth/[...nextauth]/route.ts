@@ -2,65 +2,62 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createClient } from "@supabase/supabase-js";
 
-// Supabase 관리자 권한 클라이언트 설정 (서버 사이드용)
-const supabaseAdmin = createClient(
+// Supabase 클라이언트 설정 (서버 측)
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export const authOptions = {
-  session: { strategy: "jwt" },
+const handler = NextAuth({
   providers: [
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "이메일", type: "text" },
-        password: { label: "비밀번호", type: "password" }
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        // 1. Supabase Auth로 로그인 시도
-        const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+        // Supabase Auth로 로그인 시도
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: credentials.email,
           password: credentials.password,
         });
 
-        if (error || !data.user) {
-          console.error("로그인 실패:", error?.message);
-          return null;
-        }
+        if (error || !data.user) return null;
 
-        // 2. 로그인 성공한 유저 정보 반환 (여기에 우리가 SQL로 넣은 role이 포함됨)
+        // 사용자의 role을 app_metadata에서 가져옴 (기본값 'user')
+        const role = data.user.app_metadata?.role || "user";
+
         return {
           id: data.user.id,
           email: data.user.email,
-          role: data.user.app_metadata?.role, // SQL로 넣은 그 role입니다!
+          name: data.user.user_metadata?.full_name || data.user.email,
+          role: role,
         };
-      }
-    })
+      },
+    }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      // 처음 로그인 시 user 객체에서 role을 꺼내 토큰에 저장합니다.
+    // [수정] any 타입을 명시하여 TypeScript 에러 방지
+    async jwt({ token, user }: { token: any; user?: any }) {
       if (user) {
-        token.role = (user as any).role;
+        token.role = user.role;
       }
       return token;
     },
-    async session({ session, token }) {
-      // 세션에서도 role을 사용할 수 있도록 전달합니다.
+    async session({ session, token }: { session: any; token: any }) {
       if (session.user) {
-        (session.user as any).role = token.role;
+        session.user.role = token.role;
       }
       return session;
-    }
+    },
   },
   pages: {
     signIn: "/login",
   },
   secret: process.env.NEXTAUTH_SECRET,
-};
+});
 
-const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
