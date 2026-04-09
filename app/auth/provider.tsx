@@ -2,16 +2,14 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import {
-  createClient,
   SupabaseClient,
   Session,
 } from "@supabase/supabase-js";
-import { SessionProvider } from "next-auth/react"; // 1. 추가
+import { SessionProvider } from "next-auth/react";
+// 1. 싱글톤 클라이언트를 가져옵니다.
+import { supabase } from "@/lib/supabaseClient"; 
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// 2. 기존의 중복된 createClient 호출 코드는 삭제했습니다.
 
 interface SupabaseContextValue {
   supabase: SupabaseClient;
@@ -28,6 +26,7 @@ const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 3. 이제 싱글톤 인스턴스(supabase)를 사용하여 세션을 관리합니다.
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
@@ -46,7 +45,6 @@ const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   return (
-    // 2. 외부를 SessionProvider로 감싸줍니다.
     <SessionProvider>
       <SupabaseContext.Provider value={{ supabase, session, loading }}>
         {children}
