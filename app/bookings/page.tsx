@@ -3,8 +3,14 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { format, isSameDay, parseISO, eachDayOfInterval, startOfDay } from "date-fns";
-import { ko } from "date-fns/locale"; 
+import {
+  format,
+  isSameDay,
+  parseISO,
+  eachDayOfInterval,
+  startOfDay,
+} from "date-fns";
+import { ko } from "date-fns/locale";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 
@@ -16,7 +22,7 @@ interface Booking {
   date_iso: string;
   booker_name: string;
   meeting_type: string;
-  merged_ranges?: any; 
+  merged_ranges?: any;
   place_names?: string[] | string;
   is_blocked?: boolean; // ✅ 슬롯 차단 여부 구분을 위해 추가
 }
@@ -51,29 +57,35 @@ export default function BookingsPage() {
     try {
       setLoading(true);
 
-      // 1. 일반 예약 가져오기
+      // 1️⃣ 일반 예약 가져오기
       const { data: bookingData } = await supabase
         .from("bookings")
         .select("*")
         .neq("status", "CANCELED")
         .order("date_iso", { ascending: true });
 
-      // 2. 차단된 슬롯(slots) 가져오기
+      // 2️⃣ 차단된 슬롯(slots) 가져오기
       const { data: slotData } = await supabase
         .from("slots")
         .select("*, places(name)")
         .eq("status", "BLOCKED");
 
-      // 3. 데이터 합치기 및 다중 날짜 처리
-      const normalBookings = (bookingData || []).map(b => ({ ...b, is_blocked: false }));
-      
+      // 3️⃣ 데이터 합치기 및 다중 날짜 처리
+      const normalBookings = (bookingData || []).map(b => ({
+        ...b,
+        is_blocked: false,
+      }));
+
       const blockedSlots: Booking[] = [];
       (slotData || []).forEach(s => {
         const start = new Date(s.start_at);
         const end = new Date(s.end_at);
-        
+
         // 시작일부터 종료일까지 매 날짜를 순회하며 가상 데이터 생성
-        const rangeDays = eachDayOfInterval({ start: startOfDay(start), end: startOfDay(end) });
+        const rangeDays = eachDayOfInterval({
+          start: startOfDay(start),
+          end: startOfDay(end),
+        });
 
         rangeDays.forEach(day => {
           let start_min = 0;
@@ -93,7 +105,7 @@ export default function BookingsPage() {
             meeting_type: "내부행사/점검",
             is_blocked: true,
             place_names: [s.places?.name || "지정 장소"],
-            merged_ranges: [{ start_min, end_min }]
+            merged_ranges: [{ start_min, end_min }],
           });
         });
       });
@@ -112,7 +124,7 @@ export default function BookingsPage() {
 
   const dayBookings = useMemo(() => {
     if (!selectedDate) return [];
-    return bookings.filter((b) =>
+    return bookings.filter(b =>
       isSameDay(parseISO(b.date_iso), selectedDate)
     );
   }, [bookings, selectedDate]);
@@ -125,7 +137,7 @@ export default function BookingsPage() {
     view: string;
   }) => {
     if (view !== "month") return null;
-    const matches = bookings.filter((b) =>
+    const matches = bookings.filter(b =>
       isSameDay(parseISO(b.date_iso), date)
     );
     if (matches.length === 0) return null;
@@ -135,11 +147,15 @@ export default function BookingsPage() {
 
     return (
       <div className="mtWrap">
-        {displayItems.map((m) => (
-          <div 
-            key={m.id} 
+        {displayItems.map(m => (
+          <div
+            key={m.id}
             className="mtItem"
-            style={m.is_blocked ? { backgroundColor: '#fee2e2', color: '#b91c1c' } : {}}
+            style={
+              m.is_blocked
+                ? { backgroundColor: "#fee2e2", color: "#b91c1c" }
+                : {}
+            }
           >
             [{m.meeting_type}] {m.booker_name}
           </div>
@@ -152,7 +168,13 @@ export default function BookingsPage() {
   if (loading) {
     return (
       <div className="loadingWrap">
-        <div style={{ padding: "100px 20px", textAlign: "center", color: "#666" }}>
+        <div
+          style={{
+            padding: "100px 20px",
+            textAlign: "center",
+            color: "#666",
+          }}
+        >
           데이터를 불러오는 중...
         </div>
       </div>
@@ -193,21 +215,40 @@ export default function BookingsPage() {
                   : "날짜 선택"}
               </h2>
             </div>
-            <p className="detailCount">총 {dayBookings.length}건의 안내사항</p>
+            <p className="detailCount">
+              총 {dayBookings.length}건의 안내사항
+            </p>
           </div>
 
           <div className="detailList">
             {dayBookings.length === 0 ? (
               <div className="emptyState">해당 날짜에 예약이 없습니다.</div>
             ) : (
-              dayBookings.map((b) => (
-                <div 
-                  key={b.id} 
+              dayBookings.map(b => (
+                <div
+                  key={b.id}
                   className="detailCard"
-                  style={b.is_blocked ? { borderLeft: '6px solid #ef4444', backgroundColor: '#fff5f5' } : {}}
+                  style={
+                    b.is_blocked
+                      ? {
+                          borderLeft: "6px solid #ef4444",
+                          backgroundColor: "#fff5f5",
+                        }
+                      : {}
+                  }
                 >
                   <div className="cardTop">
-                    <span className="meetingBadge" style={b.is_blocked ? { backgroundColor: '#fee2e2', color: '#dc2626' } : {}}>
+                    <span
+                      className="meetingBadge"
+                      style={
+                        b.is_blocked
+                          ? {
+                              backgroundColor: "#fee2e2",
+                              color: "#dc2626",
+                            }
+                          : {}
+                      }
+                    >
                       {b.meeting_type}
                     </span>
                     <span className="bookerName">{b.booker_name}</span>
@@ -219,19 +260,24 @@ export default function BookingsPage() {
                     </div>
                     <div className="infoRow">
                       <span className="label">시간</span>
-                      <div className="val" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                      <div
+                        className="val"
+                        style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}
+                      >
                         {b.merged_ranges ? (
                           (() => {
                             try {
-                              const ranges = typeof b.merged_ranges === 'string' 
-                                ? JSON.parse(b.merged_ranges) 
-                                : b.merged_ranges;
-                              
+                              const ranges =
+                                typeof b.merged_ranges === "string"
+                                  ? JSON.parse(b.merged_ranges)
+                                  : b.merged_ranges;
+
                               if (!Array.isArray(ranges)) return "시간 정보 없음";
-                              
+
                               return ranges.map((r: any, i: number) => (
                                 <span key={i} className="timeTag">
-                                  {formatTimeStr(r.start_min ?? r.startMin)} ~ {formatTimeStr(r.end_min ?? r.endMin)}
+                                  {formatTimeStr(r.start_min ?? r.startMin)} ~{" "}
+                                  {formatTimeStr(r.end_min ?? r.endMin)}
                                 </span>
                               ));
                             } catch (e) {
@@ -257,12 +303,13 @@ export default function BookingsPage() {
       </Link>
 
       <style jsx global>{`
-        /* 기존 스타일 동일 */
+        /* 기본 레이아웃 */
         .pageContainer {
           min-height: 100vh;
           background: #f8fafc;
           padding-bottom: 50px;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+            sans-serif;
           position: relative;
         }
         .bookingsGrid {
@@ -272,14 +319,19 @@ export default function BookingsPage() {
           grid-template-columns: 1fr;
           gap: 0;
         }
+
+        /* 캘린더 컨테이너 */
         .calendarSection {
-          background: #fff;
-          border-bottom: 1px solid #e2e8f0;
+          background: #fff; /* 초기 흰 배경 유지 */
+          border: 1px solid #e2e8f0; /* 테두리 보이게 */
+          border-bottom: none;
           transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
         }
         .calendarSection.isActive {
-          background: #111827;
+          background: #fff;
+          border: 1px solid #e2e8f0;
         }
+
         .bigCalendarWrap {
           padding: 10px;
         }
@@ -291,17 +343,11 @@ export default function BookingsPage() {
         .customCalendar .react-calendar__navigation button {
           font-size: 1.2rem;
           font-weight: 800;
-          color: #111827;
-        }
-        .calendarSection.isActive .customCalendar .react-calendar__navigation button {
-          color: #fff;
+          color: #111827; /* 화살표·날짜 숫자 색상 유지 */
         }
         .customCalendar .react-calendar__month-view__weekdays {
           font-weight: 700;
           color: #64748b;
-        }
-        .calendarSection.isActive .customCalendar .react-calendar__month-view__weekdays {
-          color: #94a3b8;
         }
         .customCalendar .react-calendar__tile {
           height: 125px;
@@ -315,11 +361,15 @@ export default function BookingsPage() {
         .customCalendar .react-calendar__tile abbr {
           font-size: 1.1rem;
           font-weight: 900;
-          color: #111827;
+          color: #111827; /* 날짜 숫자 색상 유지 */
         }
-        .calendarSection.isActive .customCalendar .react-calendar__tile abbr {
-          color: rgba(255, 255, 255, 0.9);
+
+        /* 오늘 날짜 색상 – 노란색 → 연한 파란‑청색 */
+        .customCalendar .react-calendar__tile--now {
+          background-color: #c7d2fe !important; /* 원하는 색상 */
+          color: #111827 !important;
         }
+
         .mtWrap {
           width: 100%;
           display: flex;
@@ -337,10 +387,6 @@ export default function BookingsPage() {
           overflow: hidden;
           white-space: nowrap;
         }
-        .calendarSection.isActive .mtItem {
-          background: rgba(255, 255, 255, 0.1);
-          color: #fff;
-        }
         .moreDots {
           font-size: 0.7rem;
           color: #94a3b8;
@@ -352,6 +398,8 @@ export default function BookingsPage() {
         .customCalendar .react-calendar__tile--active abbr {
           color: #fff !important;
         }
+
+        /* 상세 섹션 */
         .detailSection {
           padding: 30px 20px 100px 20px;
         }
@@ -359,8 +407,14 @@ export default function BookingsPage() {
           animation: slideUp 0.5s ease-out;
         }
         @keyframes slideUp {
-          from { transform: translateY(20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
         }
         .detailDateTitle {
           font-size: 1.6rem;
@@ -398,8 +452,14 @@ export default function BookingsPage() {
           margin-bottom: 6px;
           font-size: 0.9rem;
         }
-        .label { color: #94a3b8; min-width: 40px; }
-        .val { color: #334155; font-weight: 500; }
+        .label {
+          color: #94a3b8;
+          min-width: 40px;
+        }
+        .val {
+          color: #334155;
+          font-weight: 500;
+        }
         .timeTag {
           background: #f8fafc;
           border: 1px solid #e2e8f0;
@@ -408,6 +468,8 @@ export default function BookingsPage() {
           margin-right: 4px;
           font-size: 0.8rem;
         }
+
+        /* 플로팅 버튼 */
         .fabButton {
           position: fixed;
           bottom: 30px;
@@ -425,6 +487,7 @@ export default function BookingsPage() {
           z-index: 100;
           font-weight: 700;
         }
+
         @media (min-width: 1024px) {
           .bookingsGrid {
             grid-template-columns: 1.2fr 0.8fr;
