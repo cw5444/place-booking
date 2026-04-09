@@ -40,7 +40,6 @@ const handler = NextAuth({
     }),
   ],
   callbacks: {
-    // [수정] any 타입을 명시하여 TypeScript 에러 방지
     async jwt({ token, user }: { token: any; user?: any }) {
       if (user) {
         token.role = user.role;
@@ -57,6 +56,7 @@ const handler = NextAuth({
   pages: {
     signIn: "/login",
   },
+  // Vercel 배포 시 필수 설정
   secret: process.env.NEXTAUTH_SECRET,
 });
 
