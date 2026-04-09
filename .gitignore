@@ -1,4 +1,23 @@
+# Node/Next.js
 node_modules/
 .next/
-.env*
+dist/
+out/
+.vscode/
 .DS_Store
+
+# OS·개인 데이터 (필요에 따라 주석 해제)
+AppData/
+Desktop/
+Documents/
+Downloads/
+Pictures/
+Videos/
+
+# 브라우저/IndexedDB 등
+*.ldb
+*.log
+*.json
+*.leveldb
+*.indexeddb
+*.sqlite

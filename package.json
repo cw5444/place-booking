@@ -9,14 +9,17 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@next-auth/prisma-adapter": "^1.0.7",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/auth-helpers-react": "^0.15.0",
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.101.1",
+    "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "next": "16.2.1",
+    "next-auth": "^4.24.13",
     "react": "19.2.4",
-    "react-calendar": "^6.0.0",
+    "react-calendar": "^6.0.1",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
@@ -25,6 +28,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "prisma": "^7.7.0",
     "typescript": "^5"
   }
 }

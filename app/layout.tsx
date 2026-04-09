@@ -1,9 +1,8 @@
-// app/layout.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import Nav from "./components/Nav";
-import SupabaseProvider from "./auth/provider"; // ✅ 추가
+import SupabaseProvider from "./auth/provider"; 
 
 export const metadata: Metadata = {
   title: "경배의 집 공간 예약",
@@ -20,13 +19,13 @@ const brandStyle = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="ko">
       <body>
-        {/* ✅ SupabaseProvider로 감싸기 */}
+        {/* SessionProvider를 여기서 지우고, SupabaseProvider가 안에서 처리하도록 했습니다 */}
         <SupabaseProvider>
           <header
             style={{
@@ -51,7 +50,6 @@ export default function RootLayout({
               <Link href="/" style={brandStyle}>
                 At Your Feet
               </Link>
-
               <Nav />
             </div>
           </header>

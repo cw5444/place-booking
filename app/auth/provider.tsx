@@ -1,55 +1,66 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
-import type { Session, SupabaseClient } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import {
+  createClient,
+  SupabaseClient,
+  Session,
+} from "@supabase/supabase-js";
+import { SessionProvider } from "next-auth/react"; // 1. 추가
 
-type SupabaseContext = {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+interface SupabaseContextValue {
   supabase: SupabaseClient;
   session: Session | null;
-  loading: boolean; // 로딩 상태 추가해서 세션 확인 전까지 대기하게 함
-};
+  loading: boolean;
+}
 
-const Context = createContext<SupabaseContext | undefined>(undefined);
+const SupabaseContext = createContext<SupabaseContextValue | undefined>(undefined);
 
-export default function SupabaseProvider({ children }: { children: React.ReactNode }) {
-  const [supabase] = useState(() => 
-    createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-  );
-  
+const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. 현재 저장된 세션을 즉시 가져오기
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
       setLoading(false);
     });
 
-    // 2. 세션 변화 감지
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_, s) => {
+        setSession(s);
+        setLoading(false);
+      }
+    );
 
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
 
   return (
-    <Context.Provider value={{ supabase, session, loading }}>
-      {children}
-    </Context.Provider>
+    // 2. 외부를 SessionProvider로 감싸줍니다.
+    <SessionProvider>
+      <SupabaseContext.Provider value={{ supabase, session, loading }}>
+        {children}
+      </SupabaseContext.Provider>
+    </SessionProvider>
   );
-}
-
-export const useSupabase = () => {
-  const context = useContext(Context);
-  if (context === undefined) {
-    throw new Error('useSupabase must be used inside SupabaseProvider');
-  }
-  return context;
 };
+
+export const useSupabase = (): SupabaseContextValue => {
+  const ctx = useContext(SupabaseContext);
+  if (!ctx) {
+    throw new Error("useSupabase must be used within SupabaseProvider");
+  }
+  return ctx;
+};
+
+export default SupabaseProvider;
