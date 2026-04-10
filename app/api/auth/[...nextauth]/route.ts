@@ -19,12 +19,8 @@ const supabase = createClient(
 );
 
 /* ------------------------------------------------------------------ */
-/* 2️⃣  NextAuth 설정 – 기존 로직을 그대로 유지합니다.
-   프로젝트에 맞게 providers / callbacks / pages 등을 채워 주세요. */
+/* 2️⃣  NextAuth 설정 – 기존 로직을 그대로 유지합니다. */
 export const auth = NextAuth({
-  // -----------------------------------------------------------------
-  // 예시: CredentialsProvider (기존에 사용하시던 provider 구조 그대로)
-  // -----------------------------------------------------------------
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -48,43 +44,31 @@ export const auth = NextAuth({
         return {
           id: data.user.id,
           email: data.user.email,
-          // 필요하면 여기서 role 등 추가 필드 추출
         };
       },
     }),
-    // ← 다른 provider가 있으면 여기 추가
   ],
 
-  // -----------------------------------------------------------------
-  // 세션/ JWT 콜백 (이미 프로젝트에 있던 내용이라면 그대로 복사)
-  // -----------------------------------------------------------------
   callbacks: {
     async jwt({ token, user }) {
-      // 로그인 시 user 가 존재 → token 에 user 정보 복사
       if (user) {
         token.id = (user as any).id;
         token.email = (user as any).email;
-        // 예시: role 필드가 있다면 token.role = (user as any).role;
       }
       return token;
     },
 
-    async session({ session, token }) {
-      // session.user 에 token 에 저장한 필드 매핑
-      if (token) {
+    // 75행 에러 해결: 파라미터에 : any 추가 및 user 객체 존재 확인
+    async session({ session, token }: any) {
+      if (token && session.user) {
         session.user.id = (token as any).id;
         session.user.email = (token as any).email;
-        // 예시: session.user.role = (token as any).role;
       }
       return session;
     },
   },
 
-  // -----------------------------------------------------------------
-  // 기타 옵션 (pages, secret, etc.) – 기존 설정 그대로 사용
-  // -----------------------------------------------------------------
   secret: process.env.NEXTAUTH_SECRET,
-  // pages: { signIn: "/auth/signin", error: "/auth/error" }, // 예시
 });
 
 export { auth as GET, auth as POST };
