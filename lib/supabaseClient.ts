@@ -1,24 +1,26 @@
 // lib/supabaseClient.ts
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey  = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// 중복 생성 방지를 위한 변수
-let supabaseInstance: any = null;
+//--- 싱글톤 인스턴스 -------------------------------------------------
+let supabaseInstance: SupabaseClient | null = null;
 
-export const getSupabase = () => {
+export const getSupabase = (): SupabaseClient => {
   if (!supabaseInstance) {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    supabaseInstance = createClient(supabaseUrl, supabaseKey, {
       auth: {
-        persistSession: false, // NextAuth를 쓰므로 Supabase 자체 저장은 끕니다.
-        autoRefreshToken: false, // NextAuth가 토큰을 관리하므로 끕니다.
+        persistSession: false,          // NextAuth가 토큰을 관리합니다
+        autoRefreshToken: false,
         detectSessionInUrl: false,
+        // 같은 키를 두 번 만들면 경고가 뜨니 한 번만 사용하도록 고정
+        storageKey: 'supabase-auth-token',
       },
     });
   }
   return supabaseInstance;
 };
 
-// 기존 코드와의 호환성을 위해 export
+// 클라이언트 컴포넌트에서 바로 사용하고 싶다면 아래 export 를 그대로 쓰세요
 export const supabase = getSupabase();

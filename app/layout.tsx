@@ -1,13 +1,19 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import Nav from "./components/Nav";
-import SupabaseProvider from "./auth/provider"; 
+// 수정 포인트: 루트의 auth/provider.tsx를 참조
+import SupabaseProvider from "../auth/provider";
 
 export const metadata: Metadata = {
   title: "경배의 집 공간 예약",
   description: "경배의 집 공간 예약 시스템",
 };
+
+// (생략) 나머지 내용은 기존대로 유지
+
+
 
 const brandStyle = {
   padding: "8px 12px",
@@ -25,7 +31,6 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
-        {/* SessionProvider를 여기서 지우고, SupabaseProvider가 안에서 처리하도록 했습니다 */}
         <SupabaseProvider>
           <header
             style={{
