@@ -14,12 +14,17 @@ function hhmm(min: number) {
 }
 
 // ─────────────────────────────────────────────────────
-//  AdminSecretDashboard (통합 대시보드)
+ //  AdminSecretDashboard (통합 대시보드)
 // ─────────────────────────────────────────────────────
 export default function AdminSecretDashboard() {
   // supabase와 현재 세션을 가져오지만,
   // 세션이 없을 때도 페이지를 그대로 보여줍니다.
   const { supabase } = useSupabase();
+
+  // ------------------- [보안 추가] 간단 암호 확인 상태 -------------------
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const ADMIN_PASSWORD = "jnu1234"; // ⬅️ 여기에 사용할 관리자 비밀번호를 입력하세요!
 
   const [activeTab, setActiveTab] = useState<
     "PENDING" | "CONFIRMED" | "CANCELED" | "SLOTS"
@@ -39,39 +44,43 @@ export default function AdminSecretDashboard() {
 
   // ------------------- 데이터 로드 -------------------
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    // 비밀번호 인증 전에는 데이터를 가져오지 않음
+    if (!isAdminAuthenticated) return;
 
-    // 1️⃣ 예약 목록 (DB 스키마에 맞춰 date_iso 로 정렬)
+    setLoading(true);
     const { data: bData } = await supabase
       .from("bookings")
       .select("*")
       .order("date_iso", { ascending: true });
     if (bData) setBookings(bData);
 
-    // 2️⃣ 장소 목록 (슬롯 차단용)
-    const { data: pData } = await supabase
-      .from("places")
-      .select("id, name");
+    const { data: pData } = await supabase.from("places").select("id, name");
     if (pData) setPlaces(pData);
 
-    // 3️⃣ 차단된 슬롯 목록
     const { data: sData } = await supabase
       .from("slots")
       .select("*, places(name)")
       .order("start_at", { ascending: true });
     if (sData) setSlots(sData);
-
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, isAdminAuthenticated]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  // ------------------- [보안 추가] 암호 확인 함수 -------------------
+  const handleLogin = () => {
+    if (passwordInput === ADMIN_PASSWORD) {
+      setIsAdminAuthenticated(true);
+    } else {
+      alert("비밀번호가 틀렸습니다.");
+    }
+  };
+
   // ------------------- 예약 일괄 처리 -------------------
   const handleBulkUpdate = async (newStatus: string) => {
     if (selectedIds.length === 0) return;
-
     if (
       !confirm(
         `${selectedIds.length}건을 일괄 ${
@@ -91,6 +100,30 @@ export default function AdminSecretDashboard() {
       fetchData();
     } else {
       alert("업데이트 실패: " + error.message);
+    }
+  };
+
+  // ------------------- [추가] 예약 영구 삭제 처리 -------------------
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (
+      !confirm(
+        `⚠️ 주의: 선택하신 ${selectedIds.length}건의 예약을 시스템에서 영구히 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+      )
+    )
+      return;
+
+    const { error } = await supabase
+      .from("bookings")
+      .delete()
+      .in("id", selectedIds);
+
+    if (!error) {
+      alert("삭제되었습니다.");
+      setSelectedIds([]);
+      fetchData();
+    } else {
+      alert("삭제 실패: " + error.message);
     }
   };
 
@@ -127,6 +160,44 @@ export default function AdminSecretDashboard() {
     await supabase.from("slots").delete().eq("id", id);
     fetchData();
   };
+
+  // ------------------- 인증 체크 UI 추가 -------------------
+  if (!isAdminAuthenticated) {
+    return (
+      <div style={{ padding: "100px 20px", textAlign: "center", fontFamily: "sans-serif" }}>
+        <h2 style={{ marginBottom: "20px" }}>🔒 관리자 암호 인증</h2>
+        <input
+          type="password"
+          value={passwordInput}
+          onChange={(e) => setPasswordInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          placeholder="암호를 입력하세요"
+          style={{
+            padding: "12px",
+            fontSize: "16px",
+            borderRadius: "8px",
+            border: "1px solid #ddd",
+            marginRight: "10px",
+            width: "200px"
+          }}
+        />
+        <button
+          onClick={handleLogin}
+          style={{
+            padding: "12px 24px",
+            fontSize: "16px",
+            borderRadius: "8px",
+            border: "none",
+            backgroundColor: "#111",
+            color: "#fff",
+            cursor: "pointer"
+          }}
+        >
+          확인
+        </button>
+      </div>
+    );
+  }
 
   // ------------------- 화면 -------------------
   const filteredBookings = bookings.filter(
@@ -199,20 +270,53 @@ export default function AdminSecretDashboard() {
       {/* ── 예약 탭 (PENDING / CONFIRMED / CANCELED) ── */}
       {activeTab !== "SLOTS" && (
         <>
-          {/* 일괄 승인·거절 버튼 (PENDING 전용) */}
-          {activeTab === "PENDING" && selectedIds.length > 0 && (
+          {/* 일괄 처리 버튼 영역 (삭제 버튼 추가) */}
+          {selectedIds.length > 0 && (
             <div
               style={{
                 marginBottom: "15px",
                 display: "flex",
                 gap: "10px",
+                alignItems: "center"
               }}
             >
+              {activeTab === "PENDING" && (
+                <>
+                  <button
+                    onClick={() => handleBulkUpdate("CONFIRMED")}
+                    style={{
+                      padding: "10px 20px",
+                      backgroundColor: "#111",
+                      color: "#fff",
+                      borderRadius: "8px",
+                      border: "none",
+                      cursor: "pointer",
+                      fontWeight: "700",
+                    }}
+                  >
+                    선택 예약 승인 ({selectedIds.length}건)
+                  </button>
+                  <button
+                    onClick={() => handleBulkUpdate("CANCELED")}
+                    style={{
+                      padding: "10px 20px",
+                      backgroundColor: "#fff",
+                      color: "#ef4444",
+                      borderRadius: "8px",
+                      border: "1px solid #ef4444",
+                      cursor: "pointer",
+                    }}
+                  >
+                    선택 거절
+                  </button>
+                </>
+              )}
+              {/* 공통 삭제 버튼: PENDING, CONFIRMED, CANCELED 탭 어디서든 선택 시 노출 */}
               <button
-                onClick={() => handleBulkUpdate("CONFIRMED")}
+                onClick={handleBulkDelete}
                 style={{
                   padding: "10px 20px",
-                  backgroundColor: "#111",
+                  backgroundColor: "#ef4444",
                   color: "#fff",
                   borderRadius: "8px",
                   border: "none",
@@ -220,20 +324,7 @@ export default function AdminSecretDashboard() {
                   fontWeight: "700",
                 }}
               >
-                선택 예약 승인 ({selectedIds.length}건)
-              </button>
-              <button
-                onClick={() => handleBulkUpdate("CANCELED")}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#fff",
-                  color: "#ef4444",
-                  borderRadius: "8px",
-                  border: "1px solid #ef4444",
-                  cursor: "pointer",
-                }}
-              >
-                선택 거절
+                데이터 영구 삭제 ({selectedIds.length}건)
               </button>
             </div>
           )}
@@ -257,6 +348,7 @@ export default function AdminSecretDashboard() {
                 <th style={{ padding: "15px 12px", width: "40px" }}>
                   <input
                     type="checkbox"
+                    checked={selectedIds.length > 0 && selectedIds.length === filteredBookings.length}
                     onChange={(e) =>
                       setSelectedIds(
                         e.target.checked
