@@ -102,7 +102,7 @@ function isValidPlaceId(v: string | null): v is (typeof PLACES)[number]["id"] {
 }
 
 // ---------- 회의 종류 ----------
-const MEETING_PRESETS = ["한국어교실", "악기레슨", "예배", "기도회", "회의", "기타"] as const;
+const MEETING_PRESETS = ["한국어교실", "동아리모임", "악기레슨", "예배", "기도회", "회의", "기타"] as const;
 type MeetingPreset = (typeof MEETING_PRESETS)[number];
 type MeetingSelectValue = "" | MeetingPreset;
 
