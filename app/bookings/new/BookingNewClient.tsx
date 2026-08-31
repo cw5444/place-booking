@@ -544,10 +544,14 @@ export default function BookingNewClient() {
           {/* 캘린더 */}
           <Calendar
             value={date as any}
-           onChange={(v: any) => {
-  const next = Array.isArray(v) ? v[0] : v;
-  setDate(next ?? null);
+           onChange={(v) => {
+  if (Array.isArray(v)) {
+    setDate(v[0] ?? null);
+  } else {
+    setDate(v ?? null);
+  }
 }}
+
             minDate={new Date()}
             calendarType="gregory"
             locale="ko-KR"
