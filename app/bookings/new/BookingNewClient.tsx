@@ -78,8 +78,8 @@ function mergeSelected(selected: Slot[]): Array<{ startMin: number; endMin: numb
   if (selected.length === 0) return [];
   const sorted = [...selected].sort((a, b) => a.startMin - b.startMin);
   const merged: Array<{ startMin: number; endMin: number }> = [];
-  let curStart = sorted!.startMin;
-  let curEnd = sorted!.endMin;
+let curStart = sorted[0]!.startMin;
+let curEnd = sorted[0]!.endMin;
   for (let i = 1; i < sorted.length; i++) {
     const s = sorted[i]!;
     if (s.startMin === curEnd) curEnd = s.endMin;
@@ -208,7 +208,7 @@ export default function BookingNewClient() {
   const slotsLate = useMemo(() => buildSlots(DAY_END, FULL_END), []);
 
   // 선택 상태
-  const [selectedPlaceIds, setSelectedPlaceIds] = useState<Set<string>>(() => new Set([PLACES!.id]));
+  const [selectedPlaceIds, setSelectedPlaceIds] = useState<Set<string>>(() => new Set());
   const [date, setDate] = useState<Date | null>(new Date());
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [name, setName] = useState("");
@@ -424,7 +424,7 @@ export default function BookingNewClient() {
     if (data && data.length > 0) setAllBookings((prev) => [...prev, data as any]);
 
     alert("예약이 완료되었습니다.");
-    router.push(`/bookings/confirm?bookingId=${encodeURIComponent(data?.?.id ?? "")}`);
+    router.push(`/bookings/confirm?bookingId=${encodeURIComponent(data?.[0]?.id ?? "")}`);
   };
 
   // ---------- UI 렌더링 ----------
@@ -544,10 +544,10 @@ export default function BookingNewClient() {
           {/* 캘린더 */}
           <Calendar
             value={date as any}
-            onChange={(v) => {
-              const next = Array.isArray(v) ? v : v;
-              setDate(next ?? null);
-            }}
+           onChange={(v: Date | [Date, Date] | null) => {
+  const next = Array.isArray(v) ? v[0] : v;
+  setDate(next ?? null);
+}}
             minDate={new Date()}
             calendarType="gregory"
             locale="ko-KR"
