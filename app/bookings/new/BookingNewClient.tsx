@@ -544,7 +544,7 @@ export default function BookingNewClient() {
           {/* 캘린더 */}
           <Calendar
             value={date as any}
-           onChange={(v: Date | [Date, Date] | null) => {
+           onChange={(v: any) => {
   const next = Array.isArray(v) ? v[0] : v;
   setDate(next ?? null);
 }}
