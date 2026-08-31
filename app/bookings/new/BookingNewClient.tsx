@@ -448,50 +448,60 @@ export default function BookingNewClient() {
               const idx = placePhotoIndex[p.id] ?? 0;
               const src = p.imageSrcs[idx];
               return (
-                <label
-                  key={p.id}
-                  style={{
-                    display: "grid",
-                    gap: 8,
-                    gridTemplateColumns: "80px 1fr",
-                    alignItems: "start",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => handlePlaceToggle(p.id)}
-                    style={{ marginTop: 2, cursor: "pointer" }}
-                  />
+                // 예전 모양 복구
+<label
+  key={p.id}
+  style={{
+    display: "grid",
+    gap: 8,
+    gridTemplateColumns: "1fr",  // ← 세로 레이아웃
+    alignItems: "start",
+    cursor: "pointer",
+    userSelect: "none",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    padding: 12,
+    background: "white",
+  }}
+>
+  <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={() => handlePlaceToggle(p.id)}
+      style={{ marginTop: 4, cursor: "pointer", flexShrink: 0 }}
+    />
+    <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>
+      {p.name}
+    </span>
+  </div>
 
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPlacePhotoIndex((prev) => ({
-                        ...prev,
-                        [p.id]: ((prev[p.id] ?? 0) === 0 ? 1 : 0) as 0 | 1,
-                      }));
-                    }}
-                    title="클릭하면 사진 전환"
-                  >
-                    <img
-                      src={src}
-                      alt={p.name}
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                      style={{ width: "100%", borderRadius: 8, aspectRatio: "1" }}
-                    />
-                  </a>
+  <a
+    href="#"
+    onClick={(e) => {
+      e.preventDefault();
+      setPlacePhotoIndex((prev) => ({
+        ...prev,
+        [p.id]: ((prev[p.id] ?? 0) === 0 ? 1 : 0) as 0 | 1,
+      }));
+    }}
+    title="클릭하면 사진 전환"
+  >
+    <img
+      src={src}
+      alt={p.name}
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+      style={{ width: "100%", borderRadius: 8, aspectRatio: "1" }}
+    />
+  </a>
 
-                  <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
-                    <strong style={{ color: "#111827" }}>{p.name}</strong>
-                    <span style={{ fontSize: 12, color: "#6b7280" }}>체크해서 선택 / 사진 클릭하면 전환</span>
-                  </div>
-                </label>
+  <span style={{ fontSize: 12, color: "#6b7280" }}>
+    체크해서 선택 / 사진 클릭하면 전환
+  </span>
+</label>
+
               );
             })}
           </div>
