@@ -15,7 +15,7 @@ const STEP = 30;
 // 운영시간 (기본)
 const DAY_START = 9 * 60; // 09:00
 const DAY_END = 21 * 60; // 21:00
-// 확장 (24 시간)
+// 확장 (24 시간)
 const FULL_START = 0;
 const FULL_END = 24 * 60;
 
@@ -36,50 +36,42 @@ function useIsMobile(maxWidth = 768) {
   }, [maxWidth]);
   return isMobile;
 }
-
 function toHHMM(min: number) {
   if (min === 1440) return "24:00";
   const h = Math.floor(min / 60);
   const m = min % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
-
 function dateToISO(d: Date) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
-
 function formatKoreanDate(d: Date) {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
-
 function buildSlots(rangeStart: number, rangeEnd: number): Slot[] {
   const slots: Slot[] = [];
   for (let t = rangeStart; t < rangeEnd; t += STEP) slots.push({ startMin: t, endMin: t + STEP });
   return slots;
 }
-
 function keyOf(slot: Slot) {
   return `${slot.startMin}-${slot.endMin}`;
 }
-
 function normalizePhone(input: string) {
   return input.replace(/[^\d]/g, "");
 }
-
 function isValidPhoneKR(input: string) {
   const digits = normalizePhone(input);
   return digits.length === 10 || digits.length === 11;
 }
-
 function mergeSelected(selected: Slot[]): Array<{ startMin: number; endMin: number }> {
   if (selected.length === 0) return [];
   const sorted = [...selected].sort((a, b) => a.startMin - b.startMin);
   const merged: Array<{ startMin: number; endMin: number }> = [];
-  let curStart = sorted!.startMin;
-  let curEnd = sorted!.endMin;
+  let curStart = sorted[0]!.startMin;
+  let curEnd = sorted[0]!.endMin;
   for (let i = 1; i < sorted.length; i++) {
     const s = sorted[i]!;
     if (s.startMin === curEnd) curEnd = s.endMin;
@@ -104,14 +96,13 @@ const PLACES: Place[] = [
   },
   { id: "small2", name: "소모임실 2 (중앙 홀)", imageSrcs: ["/places/small2-1.jpg", "/places/small2-2.jpg"] },
 ];
-
 function isValidPlaceId(v: string | null): v is (typeof PLACES)[number]["id"] {
   if (!v) return false;
   return PLACES.some((p) => p.id === v);
 }
 
 // ---------- 회의 종류 ----------
-const MEETING_PRESETS = ["한국어교실", "동아리모임(YMC)", "동아리모임(GCC)", "동아리모임(기타)", "베트남예배", "영어예배", "청장년예배", "예배", "사랑이 가득 담긴 도시락", "기도회", "회의", "기타"] as const;
+const MEETING_PRESETS = ["한국어교실", "동아리모임", "악기레슨", "예배", "기도회", "회의", "기타"] as const;
 type MeetingPreset = (typeof MEETING_PRESETS)[number];
 type MeetingSelectValue = "" | MeetingPreset;
 
@@ -133,29 +124,27 @@ function SlotGrid({
 }) {
   const isMobile = useIsMobile(768);
   return (
-    <div
-      style={{
-        marginTop: 12,
-        display: "grid",
-        gap: 8,
-        borderRadius: 12,
-        border: "1px solid #e5e7eb",
-        padding: 12,
-        background: "white",
-      }}
-    >
-      <h3 style={{ marginTop: 0, marginBottom: 0, fontSize: 15, color: "#111827" }}>{title}</h3>
-      {subtitle && (
-        <div style={{ fontSize: 12, color: "#6b7280" }}>
-          {subtitle}
-        </div>
-      )}
+    <div style={{ display: "grid", gap: 8, minWidth: 0 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 10,
+          alignItems: "baseline",
+          flexWrap: "wrap",
+          minWidth: 0,
+        }}
+      >
+        <div style={{ fontWeight: 900, color: "#111827" }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 12, color: "#6b7280" }}>{subtitle}</div>}
+      </div>
 
       <div
         style={{
           display: "grid",
+          gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))",
           gap: 8,
-          gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(6, 1fr)",
+          minWidth: 0,
         }}
       >
         {slots.map((s) => {
@@ -166,6 +155,8 @@ function SlotGrid({
           return (
             <button
               key={k}
+              type="button"
+              disabled={isReserved}
               onClick={() => {
                 if (!isReserved) onToggleKey(k);
               }}
@@ -208,7 +199,7 @@ export default function BookingNewClient() {
   const slotsLate = useMemo(() => buildSlots(DAY_END, FULL_END), []);
 
   // 선택 상태
-  const [selectedPlaceIds, setSelectedPlaceIds] = useState<Set<string>>(() => new Set([PLACES!.id]));
+  const [selectedPlaceIds, setSelectedPlaceIds] = useState<Set<string>>(() => new Set([PLACES[0]!.id]));
   const [date, setDate] = useState<Date | null>(new Date());
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [name, setName] = useState("");
@@ -328,11 +319,11 @@ export default function BookingNewClient() {
 
   const canSubmit = Boolean(
     date &&
-    selectedPlaceIds.size > 0 &&
-    selectedSlots.length > 0 &&
-    name.trim() &&
-    isValidPhoneKR(phone) &&
-    isMeetingValid
+      selectedPlaceIds.size > 0 &&
+      selectedSlots.length > 0 &&
+      name.trim() &&
+      isValidPhoneKR(phone) &&
+      isMeetingValid
   );
 
   // ---------- UI 핸들러 ----------
@@ -341,39 +332,6 @@ export default function BookingNewClient() {
       const all = PLACES.map((p) => p.id);
       const isAllSelected = all.every((id) => prev.has(id));
       return isAllSelected ? new Set() : new Set(all);
-    });
-  };
-
-  // ★★★ 새로운 함수: 공간 추가 시 시간 중복 검증 ★★★
-  const handlePlaceToggle = (placeId: string) => {
-    setSelectedPlaceIds((prev) => {
-      const nxt = new Set(prev);
-      const isAdding = !nxt.has(placeId);
-
-      // 공간을 "추가"할 때만 시간 중복 검증
-      if (isAdding && selectedSlots.length > 0) {
-        // 추가하려는 공간의 예약된 시간들을 구함
-        const targetPlaceBookings = bookingsOfDay.filter((b) => {
-          const bPlaceIds = new Set(b.place_ids ?? []);
-          return bPlaceIds.has(placeId);
-        });
-
-        // 현재 선택된 시간과 겹치는지 확인
-        for (const booking of targetPlaceBookings) {
-          for (const slot of booking.slots ?? []) {
-            const slotKey = `${slot.start_min}-${slot.end_min}`;
-            if (selectedKeys.has(slotKey)) {
-              alert(`"${PLACES.find((p) => p.id === placeId)?.name}"은(는) ${toHHMM(slot.start_min)}–${toHHMM(slot.end_min)}에 이미 예약되어 있습니다.`);
-              return prev; // 추가 차단
-            }
-          }
-        }
-      }
-
-      // 검증 통과 후 상태 업데이트
-      if (nxt.has(placeId)) nxt.delete(placeId);
-      else nxt.add(placeId);
-      return nxt;
     });
   };
 
@@ -421,10 +379,10 @@ export default function BookingNewClient() {
     }
 
     // 3️⃣ 로컬 캐시 업데이트 & 이동
-    if (data && data.length > 0) setAllBookings((prev) => [...prev, data as any]);
+    if (data && data.length > 0) setAllBookings((prev) => [...prev, data[0] as any]);
 
     alert("예약이 완료되었습니다.");
-    router.push(`/bookings/confirm?bookingId=${encodeURIComponent(data?.?.id ?? "")}`);
+    router.push(`/bookings/confirm?bookingId=${encodeURIComponent(data?.[0]?.id ?? "")}`);
   };
 
   // ---------- UI 렌더링 ----------
@@ -433,119 +391,159 @@ export default function BookingNewClient() {
   const lateLabel = `${toHHMM(DAY_END)}–${toHHMM(FULL_END)}`;
 
   return (
-    <main style={{ maxWidth: 1200, margin: "0 auto", padding: 20 }}>
+    <main
+      style={{
+        padding: isMobile ? 16 : 24,
+        fontFamily: "system-ui, sans-serif",
+        maxWidth: 1120,
+        width: "100%",
+        margin: "0 auto",
+        minWidth: 0,
+      }}
+    >
       <h1>새 예약</h1>
 
-      <div style={{ display: isMobile ? "grid" : "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 2fr", gap: 20 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: isMobile ? "1fr" : "minmax(360px, 420px) minmax(520px, 1fr)",
+          gap: 16,
+          alignItems: "start",
+          minWidth: 0,
+        }}
+      >
         {/* ── 좌측: 장소 선택 + 캘린더 ── */}
-        <section style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, minWidth: 0 }}>
+        <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, minWidth: 0 }}>
           {/* 장소 선택 */}
-          <h2 style={{ marginTop: 0, fontSize: 16 }}>장소 선택 (복수 선택 가능 / 1건 예약)</h2>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ color: "#6b7280", fontSize: 13, marginBottom: 8 }}>장소 선택 (복수 선택 가능 / 1건 예약)</div>
 
-          <div style={{ display: "grid", gap: 12 }}>
-            {PLACES.map((p) => {
-              const checked = selectedPlaceIds.has(p.id);
-              const idx = placePhotoIndex[p.id] ?? 0;
-              const src = p.imageSrcs[idx];
-              return (
-                <label
-                  key={p.id}
-                  style={{
-                    display: "grid",
-                    gap: 8,
-                    gridTemplateColumns: "80px 1fr",
-                    alignItems: "start",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => handlePlaceToggle(p.id)}
-                    style={{ marginTop: 2, cursor: "pointer" }}
-                  />
-
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPlacePhotoIndex((prev) => ({
-                        ...prev,
-                        [p.id]: ((prev[p.id] ?? 0) === 0 ? 1 : 0) as 0 | 1,
-                      }));
+            <div style={{ display: "grid", gap: 10, minWidth: 0 }}>
+              {PLACES.map((p) => {
+                const checked = selectedPlaceIds.has(p.id);
+                const idx = placePhotoIndex[p.id] ?? 0;
+                const src = p.imageSrcs[idx];
+                return (
+                  <label
+                    key={p.id}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "20px 72px 1fr",
+                      alignItems: "center",
+                      gap: 10,
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 12,
+                      padding: 10,
+                      cursor: "pointer",
+                      userSelect: "none",
+                      background: checked ? "#f9fafb" : "white",
+                      minWidth: 0,
                     }}
-                    title="클릭하면 사진 전환"
                   >
-                    <img
-                      src={src}
-                      alt={p.name}
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => {
+                        setSelectedPlaceIds((prev) => {
+                          const nxt = new Set(prev);
+                          if (nxt.has(p.id)) nxt.delete(p.id);
+                          else nxt.add(p.id);
+                          return nxt;
+                        });
                       }}
-                      style={{ width: "100%", borderRadius: 8, aspectRatio: "1" }}
                     />
-                  </a>
+                    <div
+                      style={{
+                        width: 72,
+                        height: 48,
+                        borderRadius: 10,
+                        overflow: "hidden",
+                        border: "1px solid #e5e7eb",
+                        background: "#f3f4f6",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#9ca3af",
+                        fontSize: 12,
+                        cursor: "pointer",
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPlacePhotoIndex((prev) => ({
+                          ...prev,
+                          [p.id]: ((prev[p.id] ?? 0) === 0 ? 1 : 0) as 0 | 1,
+                        }));
+                      }}
+                      title="클릭하면 사진 전환"
+                    >
+                      <img
+                        src={src}
+                        alt={p.name}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    </div>
 
-                  <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
-                    <strong style={{ color: "#111827" }}>{p.name}</strong>
-                    <span style={{ fontSize: 12, color: "#6b7280" }}>체크해서 선택 / 사진 클릭하면 전환</span>
-                  </div>
-                </label>
-              );
-            })}
+                    <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
+                      <strong style={{ color: "#111827" }}>{p.name}</strong>
+                      <span style={{ fontSize: 12, color: "#6b7280" }}>체크해서 선택 / 사진 클릭하면 전환</span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+
+            {/* 전체 선택/전체 해제 버튼 */}
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={toggleSelectAllPlaces}
+                style={{
+                  borderRadius: 10,
+                  padding: "8px 10px",
+                  border: "1px solid #e5e7eb",
+                  background: "white",
+                  cursor: "pointer",
+                }}
+              >
+                {PLACES.every((p) => selectedPlaceIds.has(p.id)) ? "장소 전체 해제" : "장소 전체 선택"}
+              </button>
+            </div>
+
+            {selectedPlaceIds.size === 0 ? (
+              <div style={{ marginTop: 8, fontSize: 12, color: "#ef4444" }}>장소를 최소 1개 선택하세요.</div>
+            ) : (
+              <div style={{ marginTop: 8, fontSize: 12, color: "#6b7280" }}>
+                선택됨: <span style={{ color: "#111827" }}>{selectedPlaces.map((p) => p.name).join(", ")}</span>
+              </div>
+            )}
+
+            {showSoundNotice && (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: 10,
+                  borderRadius: 12,
+                  border: "1px solid #fde68a",
+                  background: "#fffbeb",
+                  color: "#92400e",
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                }}
+              >
+                안내: 경배실에서 음향을 크게 사용하는 경우, 같은 시간대에 인접 공간(소모임실) 사용 시 방음이 충분하지 않을 수 있습니다.
+                필요 시 시간 조정 또는 장소 변경을 권장합니다.
+              </div>
+            )}
           </div>
-
-          {/* 전체 선택/전체 해제 버튼 */}
-          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={toggleSelectAllPlaces}
-              style={{
-                borderRadius: 10,
-                padding: "8px 10px",
-                border: "1px solid #e5e7eb",
-                background: "white",
-                cursor: "pointer",
-              }}
-            >
-              {PLACES.every((p) => selectedPlaceIds.has(p.id)) ? "장소 전체 해제" : "장소 전체 선택"}
-            </button>
-          </div>
-
-          {selectedPlaceIds.size === 0 ? (
-            <div style={{ marginTop: 12, color: "#6b7280" }}>
-              장소를 최소 1개 선택하세요.
-            </div>
-          ) : (
-            <div style={{ marginTop: 12, color: "#111827" }}>
-              선택됨: {selectedPlaces.map((p) => p.name).join(", ")}
-            </div>
-          )}
-
-          {showSoundNotice && (
-            <div
-              style={{
-                marginTop: 12,
-                padding: 10,
-                borderRadius: 8,
-                border: "1px solid #fde68a",
-                background: "#fffbeb",
-                color: "#92400e",
-                fontSize: 12,
-                lineHeight: 1.5,
-              }}
-            >
-              안내: 경배실에서 음향을 크게 사용하는 경우, 같은 시간대에 인접 공간(소모임실) 사용 시 방음이 충분하지 않을 수 있습니다.
-              필요 시 시간 조정 또는 장소 변경을 권장합니다.
-            </div>
-          )}
 
           {/* 캘린더 */}
           <Calendar
             value={date as any}
             onChange={(v) => {
-              const next = Array.isArray(v) ? v : v;
+              const next = Array.isArray(v) ? v[0] : v;
               setDate(next ?? null);
             }}
             minDate={new Date()}
@@ -556,18 +554,27 @@ export default function BookingNewClient() {
               const iso = dateToISO(tileDate);
               if (!bookedDateSet.has(iso)) return null;
               return (
-                <div style={{ fontSize: 10, color: "#ef4444", fontWeight: 900 }}>●</div>
+                <div
+                  style={{
+                    marginTop: 2,
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                    pointerEvents: "none",
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: 999, background: "#ef4444", display: "inline-block" }} />
+                </div>
               );
             }}
-            style={{ marginTop: 12, borderRadius: 8 }}
           />
 
           {dateISO && (
-            <div style={{ marginTop: 12, fontSize: 13, color: "#6b7280" }}>
+            <div style={{ marginTop: 10, fontSize: 12, color: "#6b7280" }}>
               {bookingsOfDay.length === 0 ? "이 날짜에는 예약이 없습니다." : `이 날짜 예약 ${bookingsOfDay.length}건`}
             </div>
           )}
-        </section>
+        </div>
 
         {/* ── 우측: 시간 선택 & 입력 폼 ── */}
         <section style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, minWidth: 0 }}>
@@ -613,12 +620,23 @@ export default function BookingNewClient() {
                 style={{
                   marginTop: 12,
                   display: "flex",
-                  gap: 10,
+                  justifyContent: "space-between",
+                  gap: 12,
                   alignItems: "center",
-                  cursor: "pointer",
-                  userSelect: "none",
+                  flexWrap: "wrap",
+                  padding: 12,
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 12,
+                  background: "#fafafa",
                 }}
               >
+                <div style={{ display: "grid", gap: 2 }}>
+                  <div style={{ fontSize: 12, color: "#6b7280" }}>확장 시간 (필요 시)</div>
+                  <div style={{ fontWeight: 900, color: "#111827" }}>
+                    {earlyLabel} / {lateLabel}
+                  </div>
+                </div>
+
                 <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", userSelect: "none" }}>
                   <input
                     type="checkbox"
@@ -644,7 +662,7 @@ export default function BookingNewClient() {
 
               {/* 확장 슬롯 표시 */}
               {showExtended && (
-                <div style={{ marginTop: 12 }}>
+                <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
                   {/* 이른 시간 */}
                   <details open style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, background: "white" }}>
                     <summary style={{ cursor: "pointer", fontWeight: 900, color: "#111827" }}>
@@ -711,6 +729,7 @@ export default function BookingNewClient() {
                         </option>
                       ))}
                     </select>
+
                     {meetingPreset === "기타" && (
                       <input
                         value={meetingCustom}
