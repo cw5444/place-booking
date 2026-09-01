@@ -702,39 +702,7 @@ export default function BookingNewClient() {
               {/* 폼 입력 */}
               <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
                 {/* 모임 성격 */}
-                <label style={{ display: "grid", gap: 6 }}>
-                  <span style={{ fontSize: 13, color: "#6b7280" }}>모임 성격</span>
-                  <div style={{ display: "grid", gap: 8 }}>
-                    <select
-                      value={meetingPreset}
-                      onChange={(e) => setMeetingPreset(e.target.value as MeetingSelectValue)}
-                      style={{
-                        border: "1px solid #e5e7eb",
-                        borderRadius: 10,
-                        padding: "10px 12px",
-                        outline: "none",
-                        background: "white",
-                      }}
-                    >
-                      <option value="" disabled>
-                        모임성격을 선택해주세요
-                      </option>
-                      {MEETING_PRESETS.map((v) => (
-                        <option key={v} value={v}>
-                          {v}
-                        </option>
-                      ))}
-                    </select>
-                    {meetingPreset === "기타" && (
-                      <input
-                        value={meetingCustom}
-                        onChange={(e) => setMeetingCustom(e.target.value)}
-                        placeholder="예: 찬양연습, 세미나, 상담 등"
-                        style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: "10px 12px", outline: "none" }}
-                      />
-                    )}
-                  </div>
-                </label>
+                
 
                 {/* 이름 */}
                 <label style={{ display: "grid", gap: 6 }}>
