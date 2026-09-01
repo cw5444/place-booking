@@ -510,25 +510,26 @@ export default function BookingNewClient() {
           )}
 
           {/* 캘린더 */}
-          <Calendar
-            value={date as any}
-            onChange={(v) => {
-              const next = Array.isArray(v) ? v[0] : v;
-              setDate(next ?? null);
-            }}
-            minDate={new Date()}
-            calendarType="gregory"
-            locale="ko-KR"
-            tileContent={({ date: tileDate, view }) => {
-              if (view !== "month") return null;
-              const iso = dateToISO(tileDate);
-              if (!bookedDateSet.has(iso)) return null;
-              return (
-                <div style={{ fontSize: 10, color: "#ef4444", fontWeight: 900 }}>●</div>
-              );
-            }}
-            style={{ marginTop: 12, borderRadius: 8 }}
-          />
+          <div style={{ marginTop: 12, borderRadius: 8, overflow: "hidden" }}>
+  <Calendar
+    value={date as any}
+    onChange={(v) => {
+      const next = Array.isArray(v) ? v : v;
+      setDate(next ?? null);
+    }}
+    minDate={new Date()}
+    calendarType="gregory"
+    locale="ko-KR"
+    tileContent={({ date: tileDate, view }) => {
+      if (view !== "month") return null;
+      const iso = dateToISO(tileDate);
+      if (!bookedDateSet.has(iso)) return null;
+      return (
+        <div style={{ fontSize: 10, color: "#ef4444", fontWeight: 900 }}>●</div>
+      );
+    }}
+  />
+</div>
 
           {dateISO && (
             <div style={{ marginTop: 12, fontSize: 13, color: "#6b7280" }}>
