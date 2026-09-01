@@ -508,21 +508,20 @@ export default function BookingNewClient() {
               필요 시 시간 조정 또는 장소 변경을 권장합니다.
             </div>
           )}
-
-          {/* 캘린더 */}
-          <div style={{ marginTop: 12, borderRadius: 8, overflow: "hidden" }}>
+{/* 캘린더 */}
+<div style={{ marginTop: 12, borderRadius: 8, overflow: "hidden" }}>
   <Calendar
     value={date as any}
     onChange={(v) => {
-  if (v instanceof Date) {
-    setDate(v);
-  } else if (Array.isArray(v)) {
-    setDate(v[0] instanceof Date ? v[0] : null);
-  } else {
-    setDate(v ?? null);
-  }
-}}
-    minDate={new Date()}
+      if (v instanceof Date) {
+        setDate(v);
+      } else if (Array.isArray(v)) {
+        setDate(v[0] instanceof Date ? v[0] : null);
+      } else {
+        setDate(v ?? null);
+      }
+    }}
+    minDate={new Date(new Date().setHours(0, 0, 0, 0))}
     calendarType="gregory"
     locale="ko-KR"
     tileContent={({ date: tileDate, view }) => {
