@@ -78,8 +78,8 @@ function mergeSelected(selected: Slot[]): Array<{ startMin: number; endMin: numb
   if (selected.length === 0) return [];
   const sorted = [...selected].sort((a, b) => a.startMin - b.startMin);
   const merged: Array<{ startMin: number; endMin: number }> = [];
-  let curStart = sorted[0]!.startMin;
-  let curEnd = sorted[0]!.endMin;
+let curStart = sorted[0]!.startMin;
+let curEnd = sorted[0]!.endMin;
   for (let i = 1; i < sorted.length; i++) {
     const s = sorted[i]!;
     if (s.startMin === curEnd) curEnd = s.endMin;
@@ -109,6 +109,11 @@ function isValidPlaceId(v: string | null): v is (typeof PLACES)[number]["id"] {
   if (!v) return false;
   return PLACES.some((p) => p.id === v);
 }
+
+// ---------- 회의 종류 ----------
+const MEETING_PRESETS = ["한국어교실", "동아리모임(YMC)", "동아리모임(GCC)", "동아리모임(기타)", "베트남예배", "영어예배", "청장년예배", "예배", "사랑이 가득 담긴 도시락", "기도회", "회의", "기타"] as const;
+type MeetingPreset = (typeof MEETING_PRESETS)[number];
+type MeetingSelectValue = "" | MeetingPreset;
 
 // ---------- SlotGrid 컴포넌트 ----------
 function SlotGrid({
@@ -203,11 +208,26 @@ export default function BookingNewClient() {
   const slotsLate = useMemo(() => buildSlots(DAY_END, FULL_END), []);
 
   // 선택 상태
-  const [selectedPlaceIds, setSelectedPlaceIds] = useState<Set<string>>(() => new Set([PLACES[0]!.id]));
+  const [selectedPlaceIds, setSelectedPlaceIds] = useState<Set<string>>(() => new Set());
   const [date, setDate] = useState<Date | null>(new Date());
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [meetingPreset, setMeetingPreset] = useState<MeetingSelectValue>("");
+  const [meetingCustom, setMeetingCustom] = useState("");
+
+  const meetingType = useMemo(() => {
+    if (meetingPreset === "") return "";
+    if (meetingPreset !== "기타") return meetingPreset;
+    const v = meetingCustom.trim();
+    return v ? `기타: ${v}` : "";
+  }, [meetingPreset, meetingCustom]);
+
+  const isMeetingValid = useMemo(() => {
+    if (meetingPreset === "") return false;
+    if (meetingPreset === "기타") return meetingCustom.trim().length > 0;
+    return true;
+  }, [meetingPreset, meetingCustom]);
 
   const [placePhotoIndex, setPlacePhotoIndex] = useState<Record<string, 0 | 1>>({
     worship: 0,
@@ -264,6 +284,7 @@ export default function BookingNewClient() {
     if (selectedPlaceIds.size === 0) return reserved;
 
     for (const b of bookingsOfDay) {
+      // 예약이 BLOCKED인지 CONFIRMED인지에 관계없이, 같은 장소에 겹치면 BLOCKED 처리
       const bPlaceIds = new Set(b.place_ids ?? []);
       let overlaps = false;
       for (const pid of selectedPlaceIds) {
@@ -274,6 +295,7 @@ export default function BookingNewClient() {
       }
       if (!overlaps) continue;
 
+      // slot 배열은 [{ start_min, end_min }]
       for (const s of b.slots ?? []) reserved.add(`${s.start_min}-${s.end_min}`);
     }
     return reserved;
@@ -309,7 +331,8 @@ export default function BookingNewClient() {
     selectedPlaceIds.size > 0 &&
     selectedSlots.length > 0 &&
     name.trim() &&
-    isValidPhoneKR(phone)
+    isValidPhoneKR(phone) &&
+    isMeetingValid
   );
 
   // ---------- UI 핸들러 ----------
@@ -329,22 +352,25 @@ export default function BookingNewClient() {
 
       // 공간을 "추가"할 때만 시간 중복 검증
       if (isAdding && selectedSlots.length > 0) {
+        // 추가하려는 공간의 예약된 시간들을 구함
         const targetPlaceBookings = bookingsOfDay.filter((b) => {
           const bPlaceIds = new Set(b.place_ids ?? []);
           return bPlaceIds.has(placeId);
         });
 
+        // 현재 선택된 시간과 겹치는지 확인
         for (const booking of targetPlaceBookings) {
           for (const slot of booking.slots ?? []) {
             const slotKey = `${slot.start_min}-${slot.end_min}`;
             if (selectedKeys.has(slotKey)) {
               alert(`"${PLACES.find((p) => p.id === placeId)?.name}"은(는) ${toHHMM(slot.start_min)}–${toHHMM(slot.end_min)}에 이미 예약되어 있습니다.`);
-              return prev;
+              return prev; // 추가 차단
             }
           }
         }
       }
 
+      // 검증 통과 후 상태 업데이트
       if (nxt.has(placeId)) nxt.delete(placeId);
       else nxt.add(placeId);
       return nxt;
@@ -364,6 +390,7 @@ export default function BookingNewClient() {
   const onConfirm = async () => {
     if (!date || !canSubmit) return;
 
+    // 1️⃣ 현재 선택된 슬롯이 이미 다른 예약(또는 BLOCKED)과 겹치는지 재확인
     for (const s of selectedSlots) {
       if (reservedSlotKeysForSelectedPlaces.has(keyOf(s))) {
         alert("선택한 장소 중 이미 예약된 시간이 포함되어 있습니다. 다른 시간을 선택해주세요.");
@@ -371,13 +398,18 @@ export default function BookingNewClient() {
       }
     }
 
+    // 2️⃣ DB에 삽입
     const newBooking = {
+      // 테이블 컬럼명에 맞게 변환 (예시)
+      //  - id: UUID (Supabase가 자동 생성)
+      //  - booker_name, booker_phone, meeting_type, date_iso, place_ids, slots, merged_ranges, created_at
       booker_name: name.trim(),
       booker_phone: normalizePhone(phone),
+      meeting_type: meetingType,
       date_iso: dateToISO(date),
       place_ids: Array.from(selectedPlaceIds),
       place_names: selectedPlaces.map((p) => p.name),
-      slots: selectedSlots.map((s) => ({ start_min: s.startMin, end_min: s.endMin })),
+      slots: selectedSlots.map((s) => ({ start_min: s.startMin, end_min: s.endMin })), // JSONB 배열
       merged_ranges: mergedRanges.map((r) => ({ start_min: r.startMin, end_min: r.endMin })),
     } as const;
 
@@ -388,6 +420,7 @@ export default function BookingNewClient() {
       return;
     }
 
+    // 3️⃣ 로컬 캐시 업데이트 & 이동
     if (data && data.length > 0) setAllBookings((prev) => [...prev, data as any]);
 
     alert("예약이 완료되었습니다.");
@@ -415,51 +448,60 @@ export default function BookingNewClient() {
               const idx = placePhotoIndex[p.id] ?? 0;
               const src = p.imageSrcs[idx];
               return (
-                <label
-                  key={p.id}
-                  style={{
-                    display: "grid",
-                    gap: 8,
-                    gridTemplateColumns: "1fr",
-                    alignItems: "start",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => handlePlaceToggle(p.id)}
-                      style={{ cursor: "pointer" }}
-                    />
-                    <div style={{ display: "grid", gap: 2, minWidth: 0 }}>
-                      <strong style={{ color: "#111827" }}>{p.name}</strong>
-                      <span style={{ fontSize: 12, color: "#6b7280" }}>사진 클릭하면 전환</span>
-                    </div>
-                  </div>
+                // 예전 모양 복구
+<label
+  key={p.id}
+  style={{
+    display: "grid",
+    gap: 8,
+    gridTemplateColumns: "1fr",  // ← 세로 레이아웃
+    alignItems: "start",
+    cursor: "pointer",
+    userSelect: "none",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    padding: 12,
+    background: "white",
+  }}
+>
+  <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={() => handlePlaceToggle(p.id)}
+      style={{ marginTop: 4, cursor: "pointer", flexShrink: 0 }}
+    />
+    <span style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>
+      {p.name}
+    </span>
+  </div>
 
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPlacePhotoIndex((prev) => ({
-                        ...prev,
-                        [p.id]: ((prev[p.id] ?? 0) === 0 ? 1 : 0) as 0 | 1,
-                      }));
-                    }}
-                    title="클릭하면 사진 전환"
-                  >
-                    <img
-                      src={src}
-                      alt={p.name}
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                      style={{ width: "100%", borderRadius: 8, aspectRatio: "1" }}
-                    />
-                  </a>
-                </label>
+  <a
+    href="#"
+    onClick={(e) => {
+      e.preventDefault();
+      setPlacePhotoIndex((prev) => ({
+        ...prev,
+        [p.id]: ((prev[p.id] ?? 0) === 0 ? 1 : 0) as 0 | 1,
+      }));
+    }}
+    title="클릭하면 사진 전환"
+  >
+    <img
+      src={src}
+      alt={p.name}
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+      style={{ width: "100%", borderRadius: 8, aspectRatio: "1" }}
+    />
+  </a>
+
+  <span style={{ fontSize: 12, color: "#6b7280" }}>
+    체크해서 선택 / 사진 클릭하면 전환
+  </span>
+</label>
+
               );
             })}
           </div>
@@ -508,26 +550,19 @@ export default function BookingNewClient() {
               필요 시 시간 조정 또는 장소 변경을 권장합니다.
             </div>
           )}
-{/* 캘린더 */}
-<div style={{ marginTop: 12, borderRadius: 8, overflow: "hidden" }}>
+
+          {/* 캘린더 */}
+          <div style={{ marginTop: 12, borderRadius: 8, overflow: "hidden", border: "1px solid #e5e7eb" }}>
   <Calendar
     value={date as any}
     onChange={(v) => {
-      if (v instanceof Date) {
-        setDate(v);
-      } else if (Array.isArray(v)) {
-        setDate(v[0] instanceof Date ? v[0] : null);
+      if (Array.isArray(v)) {
+        setDate(v[0] ?? null);
       } else {
         setDate(v ?? null);
       }
     }}
-    minDate={
-  new Date(
-    new Date().getFullYear(),
-    new Date().getMonth(),
-    new Date().getDate()
-  )
-}
+    minDate={new Date()}
     calendarType="gregory"
     locale="ko-KR"
     tileContent={({ date: tileDate, view }) => {
@@ -605,6 +640,7 @@ export default function BookingNewClient() {
                     onChange={(e) => {
                       const next = e.target.checked;
                       setShowExtended(next);
+                      // 확장 닫을 때 자동으로 선택된 확장 슬롯을 비웁니다.
                       if (!next) {
                         setSelectedKeys((prev) => {
                           const out = new Set(prev);
@@ -665,6 +701,41 @@ export default function BookingNewClient() {
 
               {/* 폼 입력 */}
               <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+                {/* 모임 성격 */}
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span style={{ fontSize: 13, color: "#6b7280" }}>모임 성격</span>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <select
+                      value={meetingPreset}
+                      onChange={(e) => setMeetingPreset(e.target.value as MeetingSelectValue)}
+                      style={{
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 10,
+                        padding: "10px 12px",
+                        outline: "none",
+                        background: "white",
+                      }}
+                    >
+                      <option value="" disabled>
+                        모임성격을 선택해주세요
+                      </option>
+                      {MEETING_PRESETS.map((v) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                    {meetingPreset === "기타" && (
+                      <input
+                        value={meetingCustom}
+                        onChange={(e) => setMeetingCustom(e.target.value)}
+                        placeholder="예: 찬양연습, 세미나, 상담 등"
+                        style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: "10px 12px", outline: "none" }}
+                      />
+                    )}
+                  </div>
+                </label>
+
                 {/* 이름 */}
                 <label style={{ display: "grid", gap: 6 }}>
                   <span style={{ fontSize: 13, color: "#6b7280" }}>이름</span>
@@ -700,6 +771,12 @@ export default function BookingNewClient() {
                 <div style={{ marginTop: 6 }}>
                   <div style={{ fontSize: 13, color: "#6b7280" }}>장소</div>
                   <div style={{ color: "#111827" }}>{selectedPlaces.length ? selectedPlaces.map((p) => p.name).join(", ") : "—"}</div>
+                </div>
+
+                {/* 모임 성격 */}
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 13, color: "#6b7280" }}>모임 성격</div>
+                  <div style={{ color: "#111827" }}>{meetingType || "—"}</div>
                 </div>
 
                 {/* 시간 리스트 */}
