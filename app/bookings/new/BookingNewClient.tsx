@@ -203,7 +203,7 @@ export default function BookingNewClient() {
   const slotsLate = useMemo(() => buildSlots(DAY_END, FULL_END), []);
 
   // 선택 상태
-  const [selectedPlaceIds, setSelectedPlaceIds] = useState<Set<string>>(() => new Set([PLACES[0]!.id]));
+  const [selectedPlaceIds, setSelectedPlaceIds] = useState<Set<string>>(() => new Set());
   const [date, setDate] = useState<Date | null>(new Date());
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [name, setName] = useState("");
