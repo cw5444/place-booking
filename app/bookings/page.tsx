@@ -1,5 +1,13 @@
 "use client";
 
+function dateToISO(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
@@ -297,7 +305,8 @@ export default function BookingsPage() {
         </section>
       </div>
 
-      <Link href="/bookings/new" className="fabButton">
+      <Link href={`/bookings/new?date=${dateToISO(selectedDate)}`} className="fabButton">
+
         <span className="fabIcon">+</span>
         <span className="fabText">새 예약하기</span>
       </Link>

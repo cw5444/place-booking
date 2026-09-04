@@ -239,6 +239,21 @@ export default function BookingNewClient() {
     fetch();
   }, []);
 
+  // URL 로부터 초기값(날짜)
+useEffect(() => {
+  const dateStr = searchParams.get("date");
+  if (!dateStr) return;
+  
+  try {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const initialDate = new Date(year, month - 1, day);
+    setDate(initialDate);
+  } catch (e) {
+    console.error("날짜 파싱 실패:", e);
+  }
+}, [searchParams]);
+
+
   // 날짜 문자열
   const dateISO = date ? dateToISO(date) : null;
 
