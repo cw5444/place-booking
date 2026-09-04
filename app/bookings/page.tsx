@@ -154,19 +154,21 @@ export default function BookingsPage() {
     const hasMore = matches.length > 4;
 
     return (
-      <div className="mtWrap">
-        {displayItems.map(m => (
-          <div
-            key={m.id}
-            className="mtItem"
-            style={
-              m.is_blocked
-                ? { backgroundColor: "#fee2e2", color: "#b91c1c" }
-                : {}
-            }
-          >
-            [{m.meeting_type}] {m.booker_name}
-          </div>
+  <div className="mtWrap">
+    {displayItems.map(m => (
+      <div
+        key={m.id}
+        className="mtItem"
+        style={
+          m.is_blocked
+            ? { backgroundColor: "#fee2e2", color: "#b91c1c" }
+            : {}
+        }
+      >
+        {m.meeting_type ? `[${m.meeting_type}] ` : ""}{m.booker_name}
+      </div>
+    ))}
+
         ))}
         {hasMore && <div className="moreDots">...</div>}
       </div>
