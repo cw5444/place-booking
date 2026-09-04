@@ -305,7 +305,8 @@ export default function BookingsPage() {
         </section>
       </div>
 
-      <Link href={`/bookings/new?date=${dateToISO(selectedDate)}`} className="fabButton">
+      <Link href={`/bookings/new${selectedDate ? `?date=${dateToISO(selectedDate)}` : ""}`} className="fabButton">
+
 
         <span className="fabIcon">+</span>
         <span className="fabText">새 예약하기</span>
