@@ -169,7 +169,7 @@ export default function BookingsPage() {
       </div>
     ))}
 
-        ))}
+      
         {hasMore && <div className="moreDots">...</div>}
       </div>
     );
