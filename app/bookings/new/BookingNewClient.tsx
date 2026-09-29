@@ -6,15 +6,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
-import { supabase } from "@/lib/supabaseClient"; // ← Supabase 클라이언트 (전역 export)
-import type { Database } from "@/lib/database.types"; // 자동 생성된 타입 (supabase CLI)
+import { supabase } from "@/lib/supabaseClient";
+import type { Database } from "@/lib/database.types";
 
 type Slot = { startMin: number; endMin: number };
 const STEP = 30;
 
 // 운영시간 (기본)
-const DAY_START = 9 * 60; // 09:00
-const DAY_END = 21 * 60; // 21:00
+const DAY_START = 9 * 60;
+const DAY_END = 21 * 60;
 // 확장 (24 시간)
 const FULL_START = 0;
 const FULL_END = 24 * 60;
@@ -30,7 +30,6 @@ function useIsMobile(maxWidth = 768) {
       mq.addEventListener("change", apply);
       return () => mq.removeEventListener("change", apply);
     }
-    // 구형 브라우저 fallback
     mq.addListener(apply);
     return () => mq.removeListener(apply);
   }, [maxWidth]);
@@ -197,12 +196,10 @@ export default function BookingNewClient() {
   const isMobile = useIsMobile(960);
   const [showExtended, setShowExtended] = useState(false);
 
-  // 슬롯 정의 (고정)
   const slotsMain = useMemo(() => buildSlots(DAY_START, DAY_END), []);
   const slotsEarly = useMemo(() => buildSlots(FULL_START, DAY_START), []);
   const slotsLate = useMemo(() => buildSlots(DAY_END, FULL_END), []);
 
-  // 선택 상태
   const [selectedPlaceIds, setSelectedPlaceIds] = useState<Set<string>>(() => new Set());
   const [date, setDate] = useState<Date | null>(new Date());
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
@@ -215,7 +212,6 @@ export default function BookingNewClient() {
     small2: 0,
   });
 
-  // URL 로부터 초기값(관리자 링크에서 장소 미리 선택)
   const didInitFromQueryRef = useRef(false);
   useEffect(() => {
     if (didInitFromQueryRef.current) return;
@@ -225,7 +221,6 @@ export default function BookingNewClient() {
     setSelectedPlaceIds(new Set([q]));
   }, [searchParams]);
 
-  // ---------- Supabase 로부터 기존 예약 모두 가져오기 ----------
   const [allBookings, setAllBookings] = useState<Database["public"]["Tables"]["bookings"]["Row"][]>([]);
   useEffect(() => {
     const fetch = async () => {
@@ -239,40 +234,33 @@ export default function BookingNewClient() {
     fetch();
   }, []);
 
-  // URL 로부터 초기값(날짜)
-useEffect(() => {
-  const dateStr = searchParams.get("date");
-  if (!dateStr) return;
-  
-  try {
-    const [year, month, day] = dateStr.split("-").map(Number);
-    const initialDate = new Date(year, month - 1, day);
-    setDate(initialDate);
-  } catch (e) {
-    console.error("날짜 파싱 실패:", e);
-  }
-}, [searchParams]);
+  useEffect(() => {
+    const dateStr = searchParams.get("date");
+    if (!dateStr) return;
 
+    try {
+      const [year, month, day] = dateStr.split("-").map(Number);
+      const initialDate = new Date(year, month - 1, day);
+      setDate(initialDate);
+    } catch (e) {
+      console.error("날짜 파싱 실패:", e);
+    }
+  }, [searchParams]);
 
-  // 날짜 문자열
   const dateISO = date ? dateToISO(date) : null;
 
-  // 날짜가 바뀔 때마다 선택된 슬롯 초기화
   useEffect(() => setSelectedKeys(new Set()), [dateISO]);
 
-  // 선택된 장소 객체 배열
   const selectedPlaces = useMemo(() => {
     const ids = Array.from(selectedPlaceIds);
     return PLACES.filter((p) => ids.includes(p.id));
   }, [selectedPlaceIds]);
 
-  // 해당 날짜에 이미 존재하는 예약 (전체)
   const bookingsOfDay = useMemo(() => {
     if (!dateISO) return [];
     return allBookings.filter((b) => b.date_iso === dateISO);
   }, [allBookings, dateISO]);
 
-  // 현재 선택된 장소와 겹치는 기존 예약의 slot key 집합
   const reservedSlotKeysForSelectedPlaces = useMemo(() => {
     const reserved = new Set<string>();
     if (!dateISO) return reserved;
@@ -294,14 +282,12 @@ useEffect(() => {
     return reserved;
   }, [bookingsOfDay, selectedPlaceIds, dateISO]);
 
-  // 캘린더에 점(예약된 날짜) 표시용
   const bookedDateSet = useMemo(() => {
     const set = new Set<string>();
     for (const b of allBookings) set.add(b.date_iso);
     return set;
   }, [allBookings]);
 
-  // 화면에 보여줄 slot 배열 (확장 여부에 따라)
   const visibleSlots = useMemo(() => (showExtended ? [...slotsMain, ...slotsEarly, ...slotsLate] : [...slotsMain]), [
     showExtended,
     slotsEarly,
@@ -318,6 +304,7 @@ useEffect(() => {
   const mergedRanges = useMemo(() => mergeSelected(selectedSlots), [selectedSlots]);
 
   const showSoundNotice = useMemo(() => selectedPlaceIds.size > 0 && !selectedPlaceIds.has("worship"), [selectedPlaceIds]);
+  const showWorshipNotice = useMemo(() => selectedPlaceIds.has("worship"), [selectedPlaceIds]);
 
   const canSubmit = Boolean(
     date &&
@@ -327,7 +314,6 @@ useEffect(() => {
     isValidPhoneKR(phone)
   );
 
-  // ---------- UI 핸들러 ----------
   const toggleSelectAllPlaces = () => {
     setSelectedPlaceIds((prev) => {
       const all = PLACES.map((p) => p.id);
@@ -336,13 +322,11 @@ useEffect(() => {
     });
   };
 
-  // ★★★ 새로운 함수: 공간 추가 시 시간 중복 검증 ★★★
   const handlePlaceToggle = (placeId: string) => {
     setSelectedPlaceIds((prev) => {
       const nxt = new Set(prev);
       const isAdding = !nxt.has(placeId);
 
-      // 공간을 "추가"할 때만 시간 중복 검증
       if (isAdding && selectedSlots.length > 0) {
         const targetPlaceBookings = bookingsOfDay.filter((b) => {
           const bPlaceIds = new Set(b.place_ids ?? []);
@@ -375,7 +359,6 @@ useEffect(() => {
     });
   };
 
-  // ---------- 확정, Supabase에 저장 ----------
   const onConfirm = async () => {
     if (!date || !canSubmit) return;
 
@@ -409,7 +392,6 @@ useEffect(() => {
     router.push(`/bookings/confirm?bookingId=${encodeURIComponent(data?.[0]?.id ?? "")}`);
   };
 
-  // ---------- UI 렌더링 ----------
   const defaultTimeLabel = `${toHHMM(DAY_START)}–${toHHMM(DAY_END)}`;
   const earlyLabel = `${toHHMM(FULL_START)}–${toHHMM(DAY_START)}`;
   const lateLabel = `${toHHMM(DAY_END)}–${toHHMM(FULL_END)}`;
@@ -419,9 +401,7 @@ useEffect(() => {
       <h1>새 예약</h1>
 
       <div style={{ display: isMobile ? "grid" : "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 2fr", gap: 20 }}>
-        {/* ── 좌측: 장소 선택 + 캘린더 ── */}
         <section style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, minWidth: 0 }}>
-          {/* 장소 선택 */}
           <h2 style={{ marginTop: 0, fontSize: 16 }}>장소 선택 (복수 선택 가능 / 1건 예약)</h2>
 
           <div style={{ display: "grid", gap: 12 }}>
@@ -479,7 +459,6 @@ useEffect(() => {
             })}
           </div>
 
-          {/* 전체 선택/전체 해제 버튼 */}
           <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
             <button
               type="button"
@@ -523,38 +502,49 @@ useEffect(() => {
               필요 시 시간 조정 또는 장소 변경을 권장합니다.
             </div>
           )}
-{/* 캘린더 */}
-<div style={{ marginTop: 12, borderRadius: 8, overflow: "hidden" }}>
-  <Calendar
-    value={date as any}
-    onChange={(v) => {
-      if (v instanceof Date) {
-        setDate(v);
-      } else if (Array.isArray(v)) {
-        setDate(v[0] instanceof Date ? v[0] : null);
-      } else {
-        setDate(v ?? null);
-      }
-    }}
-    minDate={
-  new Date(
-    new Date().getFullYear(),
-    new Date().getMonth(),
-    new Date().getDate()
-  )
-}
-    calendarType="gregory"
-    locale="ko-KR"
-    tileContent={({ date: tileDate, view }) => {
-      if (view !== "month") return null;
-      const iso = dateToISO(tileDate);
-      if (!bookedDateSet.has(iso)) return null;
-      return (
-        <div style={{ fontSize: 10, color: "#ef4444", fontWeight: 900 }}>●</div>
-      );
-    }}
-  />
-</div>
+
+          {showWorshipNotice && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: 10,
+                borderRadius: 8,
+                border: "1px solid #fde68a",
+                background: "#fffbeb",
+                color: "#92400e",
+                fontSize: 12,
+                lineHeight: 1.5,
+              }}
+            >
+              안내: 경배실을 사용하는 경우, 같은 시간대에 소모임실 1(경배실 안쪽) 사용인원들의 경배실 통행이 있을 수 있으니 이점 양해 바랍니다.
+            </div>
+          )}
+
+          <div style={{ marginTop: 12, borderRadius: 8, overflow: "hidden" }}>
+            <Calendar
+              value={date as any}
+              onChange={(v) => {
+                if (v instanceof Date) {
+                  setDate(v);
+                } else if (Array.isArray(v)) {
+                  setDate(v[0] instanceof Date ? v[0] : null);
+                } else {
+                  setDate(v ?? null);
+                }
+              }}
+              minDate={new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())}
+              calendarType="gregory"
+              locale="ko-KR"
+              tileContent={({ date: tileDate, view }) => {
+                if (view !== "month") return null;
+                const iso = dateToISO(tileDate);
+                if (!bookedDateSet.has(iso)) return null;
+                return (
+                  <div style={{ fontSize: 10, color: "#ef4444", fontWeight: 900 }}>●</div>
+                );
+              }}
+            />
+          </div>
 
           {dateISO && (
             <div style={{ marginTop: 12, fontSize: 13, color: "#6b7280" }}>
@@ -563,7 +553,6 @@ useEffect(() => {
           )}
         </section>
 
-        {/* ── 우측: 시간 선택 & 입력 폼 ── */}
         <section style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, minWidth: 0 }}>
           <h2 style={{ marginTop: 0, fontSize: 16 }}>시간 선택 (예약된 시간은 선택 불가)</h2>
 
@@ -575,7 +564,6 @@ useEffect(() => {
                 선택 날짜: <strong style={{ color: "#111827" }}>{formatKoreanDate(date)}</strong>
               </p>
 
-              {/* 선택 초기화 버튼 */}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
                 <button
                   type="button"
@@ -592,7 +580,6 @@ useEffect(() => {
                 </button>
               </div>
 
-              {/* 기본시간 */}
               <SlotGrid
                 title="기본 시간"
                 subtitle={`${defaultTimeLabel} (30분 단위)`}
@@ -602,7 +589,6 @@ useEffect(() => {
                 onToggleKey={onToggleSlotKey}
               />
 
-              {/* 확장시간 토글 */}
               <div
                 style={{
                   marginTop: 12,
@@ -635,10 +621,8 @@ useEffect(() => {
                 </label>
               </div>
 
-              {/* 확장 슬롯 표시 */}
               {showExtended && (
                 <div style={{ marginTop: 12 }}>
-                  {/* 이른 시간 */}
                   <details open style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, background: "white" }}>
                     <summary style={{ cursor: "pointer", fontWeight: 900, color: "#111827" }}>
                       이른 시간 ({earlyLabel})
@@ -655,7 +639,6 @@ useEffect(() => {
                     </div>
                   </details>
 
-                  {/* 늦은 시간 */}
                   <details open style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, background: "white" }}>
                     <summary style={{ cursor: "pointer", fontWeight: 900, color: "#111827" }}>
                       늦은 시간 ({lateLabel})
@@ -667,7 +650,7 @@ useEffect(() => {
                         slots={slotsLate}
                         reservedKeys={reservedSlotKeysForSelectedPlaces}
                         selectedKeys={selectedKeys}
-                        onToggleKey={onToggleSlotKey}
+                        onToggleSlotKey={onToggleSlotKey}
                       />
                     </div>
                   </details>
@@ -678,9 +661,7 @@ useEffect(() => {
                 </div>
               )}
 
-              {/* 폼 입력 */}
               <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-                {/* 이름 */}
                 <label style={{ display: "grid", gap: 6 }}>
                   <span style={{ fontSize: 13, color: "#6b7280" }}>이름</span>
                   <input
@@ -691,7 +672,6 @@ useEffect(() => {
                   />
                 </label>
 
-                {/* 전화번호 */}
                 <label style={{ display: "grid", gap: 6 }}>
                   <span style={{ fontSize: 13, color: "#6b7280" }}>전화번호</span>
                   <input
@@ -707,17 +687,14 @@ useEffect(() => {
                 </label>
               </div>
 
-              {/* 선택 요약 & 확정 버튼 */}
               <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
                 <div style={{ color: "#6b7280", fontSize: 14 }}>선택 요약</div>
 
-                {/* 장소 */}
                 <div style={{ marginTop: 6 }}>
                   <div style={{ fontSize: 13, color: "#6b7280" }}>장소</div>
                   <div style={{ color: "#111827" }}>{selectedPlaces.length ? selectedPlaces.map((p) => p.name).join(", ") : "—"}</div>
                 </div>
 
-                {/* 시간 리스트 */}
                 {selectedSlots.length === 0 ? (
                   <div style={{ marginTop: 10, color: "#6b7280" }}>시간을 선택하세요.</div>
                 ) : (
@@ -730,7 +707,6 @@ useEffect(() => {
                   </ul>
                 )}
 
-                {/* 예약 확정 */}
                 <button
                   type="button"
                   disabled={!canSubmit}
