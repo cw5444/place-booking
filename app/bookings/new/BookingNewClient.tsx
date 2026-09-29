@@ -304,7 +304,11 @@ export default function BookingNewClient() {
   const mergedRanges = useMemo(() => mergeSelected(selectedSlots), [selectedSlots]);
 
   const showSoundNotice = useMemo(() => selectedPlaceIds.size > 0 && !selectedPlaceIds.has("worship"), [selectedPlaceIds]);
-  const showWorshipNotice = useMemo(() => selectedPlaceIds.has("worship"), [selectedPlaceIds]);
+  const showWorshipNotice = useMemo(
+  () => selectedPlaceIds.has("worship") && !selectedPlaceIds.has("small1"),
+  [selectedPlaceIds]
+);
+
 
   const canSubmit = Boolean(
     date &&
