@@ -650,7 +650,7 @@ export default function BookingNewClient() {
                         slots={slotsLate}
                         reservedKeys={reservedSlotKeysForSelectedPlaces}
                         selectedKeys={selectedKeys}
-                        onToggleSlotKey={onToggleSlotKey}
+                        onToggleKey={onToggleSlotKey}
                       />
                     </div>
                   </details>
