@@ -228,8 +228,9 @@ export default function BookingConfirmClient() {
         lineHeight: "1.6",
         textAlign: "center"
       }}>
-        💡 <strong>안내:</strong> 예약 수정이나 취소가 필요하신 경우,<br/>
-        직접 변경이 불가능하므로 반드시 <strong>관리자에게 연락</strong>해 주시기 바랍니다.
+        💡 <strong>안내:</strong> 예약 변경이나 취소가 필요한 경우 <strong>예약 담당자</strong>에게 연락해 주세요.<br/>
+        관리자: 010-9884-7319<br/>
+        예약 수정 및 문의: 010-7903-6267
       </div>
 
       {/* 버튼들 */}
