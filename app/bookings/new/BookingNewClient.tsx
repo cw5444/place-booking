@@ -159,6 +159,8 @@ function SlotGrid({
           return (
             <button
               key={k}
+              type="button"
+              disabled={isReserved}
               onClick={() => {
                 if (!isReserved) onToggleKey(k);
               }}
@@ -389,7 +391,7 @@ export default function BookingNewClient() {
       return;
     }
 
-    if (data && data.length > 0) setAllBookings((prev) => [...prev, data as any]);
+    if (data && data.length > 0) setAllBookings((prev) => [...prev, data[0] as any]);
 
     alert("예약이 완료되었습니다.");
     router.push(`/bookings/confirm?bookingId=${encodeURIComponent(data?.[0]?.id ?? "")}`);
@@ -403,7 +405,7 @@ export default function BookingNewClient() {
     <main style={{ maxWidth: 1200, margin: "0 auto", padding: 20 }}>
       <h1>새 예약</h1>
 
-      <div style={{ display: isMobile ? "grid" : "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 2fr", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 2fr", gap: 20 }}>
         <section style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, minWidth: 0 }}>
           <h2 style={{ marginTop: 0, fontSize: 16 }}>장소 선택 (복수 선택 가능 / 1건 예약)</h2>
 
@@ -437,8 +439,7 @@ export default function BookingNewClient() {
                     </div>
                   </div>
 
-                  <a
-                    href="#"
+                  <div
                     onClick={(e) => {
                       e.preventDefault();
                       setPlacePhotoIndex((prev) => ({
@@ -446,7 +447,7 @@ export default function BookingNewClient() {
                         [p.id]: ((prev[p.id] ?? 0) === 0 ? 1 : 0) as 0 | 1,
                       }));
                     }}
-                    title="클릭하면 사진 전환"
+                    style={{ position: "relative", width: "100%", borderRadius: 8, overflow: "hidden", aspectRatio: "1", cursor: "pointer" }}
                   >
                     <img
                       src={src}
@@ -454,9 +455,9 @@ export default function BookingNewClient() {
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
                       }}
-                      style={{ width: "100%", borderRadius: 8, aspectRatio: "1" }}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
-                  </a>
+                  </div>
                 </label>
               );
             })}
@@ -543,7 +544,7 @@ export default function BookingNewClient() {
                 const iso = dateToISO(tileDate);
                 if (!bookedDateSet.has(iso)) return null;
                 return (
-                  <div style={{ fontSize: 10, color: "#ef4444", fontWeight: 900 }}>●</div>
+                  <div style={{ fontSize: 10, color: "#ef4444", fontWeight: 900, textAlign: "center" }}>●</div>
                 );
               }}
             />
@@ -719,11 +720,21 @@ export default function BookingNewClient() {
                   border: "1px solid #bae6fd",
                   color: "#0369a1",
                   fontSize: "14px",
-                  lineHeight: "1.6"
+                  lineHeight: "1.7",
+                  textAlign: "center"
                 }}>
-                  💡 <strong>안내:</strong> 예약 변경이나 취소가 필요한 경우 <strong>예약 담당자</strong>에게 연락해 주세요.<br/>
-                  관리자: 010-9884-7319<br/>
-                  예약 수정 및 문의: 010-7903-6267
+                  💡 <strong>직접 예약 수정 및 취소가 불가능합니다.</strong><br/>
+                  변경이 필요한 경우 아래 담당자에게 문자로 연락해 주세요.<br/>
+                  <div style={{ 
+                    marginTop: 12, 
+                    display: "inline-block", 
+                    textAlign: "left", 
+                    fontFamily: "inherit",
+                    fontSize: "13px" 
+                  }}>
+                    • 공간 관련 전반 문의: <a href="sms:01098847319" style={{ color: "#0369a1", fontWeight: 700, textDecoration: "underline" }}>010-9884-7319</a><br/>
+                    • 예약 수정 관련 문의: <a href="sms:01079036267" style={{ color: "#0369a1", fontWeight: 700, textDecoration: "underline" }}>010-7903-6267</a>
+                  </div>
                 </div>
 
                 <button
