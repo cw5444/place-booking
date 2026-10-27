@@ -1,4 +1,3 @@
-// app/bookings/new/BookingNewClient.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -710,6 +709,20 @@ export default function BookingNewClient() {
                     ))}
                   </ul>
                 )}
+
+                {/* ── 안내 문구 추가 ── */}
+                <div style={{
+                  marginTop: 16,
+                  padding: "12px",
+                  backgroundColor: "#f9fafb",
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb",
+                  fontSize: "13px",
+                  color: "#4b5563",
+                  lineHeight: "1.6"
+                }}>
+                  💡 <strong>안내:</strong> 예약 완료 후에는 시스템상에서 직접 수정이나 취소가 불가능합니다. 일정을 변경하거나 취소해야 하는 경우 <strong>관리자에게 연락</strong>해 주시기 바랍니다.
+                </div>
 
                 <button
                   type="button"
